@@ -1,0 +1,3 @@
+<launch>
+  <node pkg="team52" type="path8.py" name="path8_node"  output="screen"></node>
+</launch>
