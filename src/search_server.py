@@ -64,8 +64,8 @@ class SearchActionServer(object):
       
 
     def scan_callback(self, scan_data):
-        left_arc = scan_data.ranges[0:11]
-        right_arc = scan_data.ranges[-10:]
+        left_arc = scan_data.ranges[0:20]
+        right_arc = scan_data.ranges[-21:]
         front_arc = np.array(left_arc[::-1] + right_arc[::-1])
         self.min_distance = front_arc.min()
         self.object_angle = self.arc_angles[np.argmin(front_arc)]
@@ -104,7 +104,7 @@ class SearchActionServer(object):
         self.turn = False
         self.walk=False
         path_rad=1.0
-        lin_vel=0.1
+        lin_vel=0.26
         
         # position_x=[]
         # position_y=[]
@@ -190,7 +190,7 @@ class SearchActionServer(object):
                     
                         else:
                             self.vel = Twist()
-                            self.vel.angular.z = -0.2
+                            self.vel.angular.z = -0.26
                             self.pub.publish(self.vel)
                             wait += 1
                             self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
