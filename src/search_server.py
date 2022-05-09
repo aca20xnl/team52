@@ -64,8 +64,8 @@ class SearchActionServer(object):
       
 
     def scan_callback(self, scan_data):
-        left_arc = scan_data.ranges[0:11]
-        right_arc = scan_data.ranges[-10:]
+        left_arc = scan_data.ranges[0:20]
+        right_arc = scan_data.ranges[-21:]
         front_arc = np.array(left_arc[::-1] + right_arc[::-1])
         self.min_distance = front_arc.min()
         self.object_angle = self.arc_angles[np.argmin(front_arc)]
@@ -103,8 +103,8 @@ class SearchActionServer(object):
         duration=rospy.get_rostime()-startTime 
         self.turn = False
         self.walk=False
-        path_rad=1
-        lin_vel=0.2
+        path_rad=1.0
+        lin_vel=0.26
         
         # position_x=[]
         # position_y=[]
@@ -113,13 +113,11 @@ class SearchActionServer(object):
                 self.vel_cmd.linear.x=lin_vel
                 self.vel_cmd.angular.z=lin_vel/path_rad
                 self.pub.publish(self.vel_cmd)
-                duration=rospy.get_rostime()-startTime 
-                print(duration.secs-startTime.secs)
 
-               
+                # duration=rospy.get_rostime()-startTime 
                 # self.vel_controller.set_move_cmd(goal.fwd_velocity, 0)    
                 # self.vel_controller.publish()
-                # self.angle_closet_object=self.tb3_lidar.closest_object_position
+                self.angle_closet_object=self.tb3_lidar.closest_object_position
                 self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
         #       # populate the feedback message and publish it:
                 self.feedback.current_distance_travelled = self.distance
@@ -133,16 +131,12 @@ class SearchActionServer(object):
                 self.turn=True
                 self.x0 = self.x
                 self.y0 = self.y
-                duration=rospy.get_rostime()-startTime 
-                print(duration.secs-startTime.secs)
                 
                 self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
         #       # populate the feedback message and publish it:
                 self.feedback.current_distance_travelled = self.distance
                 self.actionserver.publish_feedback(self.feedback)
                 
-
-           
 
                 
             # else:
@@ -174,15 +168,18 @@ class SearchActionServer(object):
                 #         self.pub.publish(self.vel)
                 #         wait += 1
                     
+                    
+
+                    
+                    
+                
 
                 # while turn_right==True and self.turn:
-                        if abs(current_theta_z- self.theta_z) >= self.tb3_lidar.min_distance  and wait > 5:
+                        if abs(current_theta_z- self.theta_z) >= self.tb3_lidar.min_distance and wait > 5:
                             self.walk=True
                             self.turn=False
                             self.theta_z0 = self.theta_z
                             wait = 0
-                            duration=rospy.get_rostime()-startTime 
-                            print(duration.secs-startTime.secs)
                             self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
                         # populate the feedback message and publish it:
                             self.feedback.current_distance_travelled = self.distance
@@ -196,8 +193,6 @@ class SearchActionServer(object):
                             self.vel.angular.z = -0.26
                             self.pub.publish(self.vel)
                             wait += 1
-                            duration=rospy.get_rostime()-startTime 
-                            print(duration.secs-startTime.secs)
                             self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
                             # populate the feedback message and publish it:
                             self.feedback.current_distance_travelled = self.distance
