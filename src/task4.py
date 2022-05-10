@@ -15,9 +15,9 @@ from tb3 import Tb3Move
 
 # setup a cmd_vel publisher and an odom subscriber:
 from geometry_msgs.msg import Twist
-from math import sqrt, pow, pi#
+from math import sqrt, pow, pi
 from tf.transformations import euler_from_quaternion
-
+from nav_msgs.msg import Odometry
 
 
 
@@ -31,6 +31,8 @@ class colour_search(object):
         # (by subscribing to the /camera/rgb/image_raw topic).  
         self.camera_subscriber = rospy.Subscriber("/camera/rgb/image_raw",
             Image, self.camera_callback)
+        self.sub = rospy.Subscriber('odom', Odometry, self.callback_function)
+        self.pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
         self.cvbridge_interface = CvBridge()
 
         self.robot_controller = Tb3Move()
@@ -63,6 +65,8 @@ class colour_search(object):
         self.x0 = 0.0
         self.y0 = 0.0
         self.theta_z0 = 0.0
+        self.startup=True
+
 
         # Task 3  
         # Thresholds for ["Blue", "Red", "Green", "Turquoise"]
@@ -178,14 +182,20 @@ class colour_search(object):
         # convert orientation co-ords to roll, pitch & yaw (theta_x, theta_y, theta_z):
         (roll, pitch, yaw) = euler_from_quaternion([or_x, or_y, or_z, or_w], 'sxyz')
         
-        self.x0 = pos_x
-        self.y0 = pos_y
+        self.x = pos_x
+        self.y = pos_y
         self.theta_z = yaw 
 
+        if self.startup:
+            self.startup = False
+            self.x0 = self.x
+            self.y0 = self.y
+            self.theta_z0 = self.theta_z
+
     def main(self):
-        while not self.ctrl_c:
-            if self.stop_counter > 0:
-                self.stop_counter -= 1
+        # while not self.ctrl_c:
+            # if self.stop_counter > 0:
+                # self.stop_counter -= 1
 
             # If the robot can't see a blue pillar then it turns on the spot quickly.
             
@@ -203,19 +213,31 @@ class colour_search(object):
             
             # The whole process repeats until it finds the blue pillar once again. 
 
-            current_theta_z=self.theta_z
-            self.vel = Twist()
-            self.vel.linear.x = 0
-            self.vel.angular.z = -1.8
-            self.pub.publish(self.vel)
+            
             # turn_right=False
             # turn_left=False
+
+            wait = 0
+            self.turn=True
+            while self.turn:
+                    if abs(self.theta_z0 - self.theta_z) >= pi/2 and wait > 5:
+                        # If the robot has turned 90 degrees (in radians) then stop turning
+                        self.turn = False
+                        self.vel = Twist()
+                        self.theta_z0 = self.theta_z
+                        status = "turn-fwd transition"
+                        wait = 0
+                    else:
+                        self.vel = Twist()
+                        self.vel.angular.z = -0.2
+                        status = "turning"
+                        wait += 1
+                    self.pub.publish(self.vel)
+               
+                    # self.rate.sleep()
         
-            if abs(current_theta_z- self.theta_z) >= pi/2:
-                self.vel = Twist()
-                self.vel.linear.x = 0
-                self.vel.angular.z = 0
-                self.pub.publish(self.vel)
+        
+
             
             
             # BLUE
