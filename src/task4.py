@@ -216,27 +216,48 @@ class colour_search(object):
             
             # turn_right=False
             # turn_left=False
+            # wait = 0
 
-            wait = 0
-            self.turn=True
-            while self.turn:
-                    if abs(self.theta_z0 - self.theta_z) >= pi/2 and wait > 5:
-                        # If the robot has turned 90 degrees (in radians) then stop turning
-                        self.turn = False
-                        self.vel = Twist()
-                        self.theta_z0 = self.theta_z
-                        status = "turn-fwd transition"
-                        wait = 0
-                    else:
-                        self.vel = Twist()
-                        self.vel.angular.z = -0.2
-                        status = "turning"
-                        wait += 1
-                    self.pub.publish(self.vel)
+            # if self.startup:
+            #     self.turn=True
+
+            # while self.turn:
+            #     if abs(self.theta_z0 - self.theta_z) >= pi/2 and wait > 5:
+            #         # If the robot has turned 90 degrees (in radians) then stop turning
+            #         self.turn = False
+            #         self.vel = Twist()
+            #         self.theta_z0 = self.theta_z
+            #         status = "turn-fwd transition"
+            #         wait = 0
+
+            #     else:
+            #         self.vel = Twist()
+            #         self.vel.angular.z = -0.2
+            #         status = "turning"
+            #         wait += 1
+            #     self.pub.publish(self.vel)
+
+            # while not self.turn and abs(self.theta_z0 - self.theta_z) >= pi/2:
+
+            #     # TURQUOISE 
+            #     if self.m00_turq > self.m00_min:
+            #         # turquoise blob detected
+            #         if self.cy_turq >= 560-100 and self.cy_turq <= 560+100:
+            #             if self.move_rate == 'slow':
+            #                 self.move_rate = 'stop'
+            #                 print("SEARCH INITIATED: The target beacon colour is turquoise.")
+            #                 while self.move_rate == 'stop':
+            #                     self.vel.linear.x = 1
+            #                     self.pub.publish(self.vel)
+            #         else:
+            #                 self.move_rate = 'slow'
+            #     else:
+            #             self.move_rate = 'fast'
+
                
-                    # self.rate.sleep()
-        
-        
+        status = ""
+        while not self.ctrl_c:
+
 
             
             
@@ -247,43 +268,45 @@ class colour_search(object):
                     if self.move_rate == 'slow':
                         self.move_rate = 'stop'
                         print("SEARCH INITIATED: The target beacon colour is blue.")
-                        while self.move_rate == 'stop':
-                            self.vel.linear.x = 1
-                            self.pub.publish(self.vel)
+                        status = "can start moving"
+                        # while status == "can start moving":
+                        #     self.robot_controller.set_move_cmd(0.0, 0.0)
+                            # self.vel.linear.x = 1
+                            # self.pub.publish(self.vel)
                 else:
                     self.move_rate = 'slow'
             else:
                 self.move_rate = 'fast'
 
-            # RED
-            if self.m00_red > self.m00_min:
-                # red blob detected
-                if self.cy_red >= 560-100 and self.cy_red <= 560+100:
-                    if self.move_rate == 'slow':
-                        self.move_rate = 'stop'
-                        print("SEARCH INITIATED: The target beacon colour is red.")
-                        while self.move_rate == 'stop':
-                            self.vel.linear.x = 1
-                            self.pub.publish(self.vel)
-                else:
-                    self.move_rate = 'slow'
-            else:
-                self.move_rate = 'fast'
+            # # RED
+            # if self.m00_red > self.m00_min:
+            #     # red blob detected
+            #     if self.cy_red >= 560-100 and self.cy_red <= 560+100:
+            #         if self.move_rate == 'slow':
+            #             self.move_rate = 'stop'
+            #             print("SEARCH INITIATED: The target beacon colour is red.")
+            #             while self.move_rate == 'stop':
+            #                 self.vel.linear.x = 1
+            #                 self.pub.publish(self.vel)
+            #     else:
+            #         self.move_rate = 'slow'
+            # else:
+            #     self.move_rate = 'fast'
 
-            # GREEN 
-            if self.m00_green > self.m00_min:
-                # green blob detected
-                if self.cy_green >= 560-100 and self.cy_green <= 560+100:
-                    if self.move_rate == 'slow':
-                        self.move_rate = 'stop'
-                        print("SEARCH INITIATED: The target beacon colour is green.")
-                        while self.move_rate == 'stop':
-                            self.vel.linear.x = 1
-                            self.pub.publish(self.vel)
-                else:
-                    self.move_rate = 'slow'
-            else:
-                self.move_rate = 'fast'
+            # # GREEN 
+            # if self.m00_green > self.m00_min:
+            #     # green blob detected
+            #     if self.cy_green >= 560-100 and self.cy_green <= 560+100:
+            #         if self.move_rate == 'slow':
+            #             self.move_rate = 'stop'
+            #             print("SEARCH INITIATED: The target beacon colour is green.")
+            #             while self.move_rate == 'stop':
+            #                 self.vel.linear.x = 1
+            #                 self.pub.publish(self.vel)
+            #     else:
+            #         self.move_rate = 'slow'
+            # else:
+            #     self.move_rate = 'fast'
 
             # # TURQUOISE 
             # if self.m00_turq > self.m00_min:
@@ -315,40 +338,40 @@ class colour_search(object):
 
 
             # TURQUOISE 
-            if self.m00_turq > self.m00_min:
-                # turquoise blob detected
-                if self.cy_turq >= 560-100 and self.cy_turq <= 560+100:
-                    if self.move_rate == 'slow':
-                        self.move_rate = 'stop'
-                        print("SEARCH INITIATED: The target beacon colour is turquoise.")
-                        while self.move_rate == 'stop':
-                            self.vel.linear.x = 1
-                            self.pub.publish(self.vel)
-                else:
-                    self.move_rate = 'slow'
-            else:
-                self.move_rate = 'fast'
+            # if self.m00_turq > self.m00_min:
+            #     # turquoise blob detected
+            #     if self.cy_turq >= 560-100 and self.cy_turq <= 560+100:
+            #         if self.move_rate == 'slow':
+            #             self.move_rate = 'stop'
+            #             print("SEARCH INITIATED: The target beacon colour is turquoise.")
+            #             while self.move_rate == 'stop':
+            #                 self.vel.linear.x = 1
+            #                 self.pub.publish(self.vel)
+            #     else:
+            #         self.move_rate = 'slow'
+            # else:
+            #     self.move_rate = 'fast'
 
     
                 
                 
             if self.move_rate == 'fast':
-                print("MOVING FAST: I can't see anything at the moment, scanning the area...")
+                # print("MOVING FAST: I can't see anything at the moment, scanning the area...")
                 self.robot_controller.set_move_cmd(0.0, self.turn_vel_fast)
             elif self.move_rate == 'slow':
-                print(f"MOVING SLOW: A blob of colour of size {self.m00_turq:.0f} pixels is in view at y-position: {self.cy_turq:.0f} pixels.")
+                # print(f"MOVING SLOW: A blob of colour of size {self.m00_turq:.0f} pixels is in view at y-position: {self.cy_turq:.0f} pixels.")
                 self.robot_controller.set_move_cmd(0.0, self.turn_vel_slow)
             elif self.move_rate == 'stop':
-                print(f"STOPPED: The blob of colour is now dead-ahead at y-position {self.cy:.0f} pixels.")
+                # print(f"STOPPED: The blob of colour is now dead-ahead at y-position {self.cy:.0f} pixels.")
                 self.robot_controller.set_move_cmd(0.0, 0.0)
             else:
-                print(f"MOVING SLOW: A blob of colour of size {self.m00:.0f} pixels is in view at y-position: {self.cy:.0f} pixels.")
+                # print(f"MOVING SLOW: A blob of colour of size {self.m00_turq:.0f} pixels is in view at y-position: {self.cy:.0f} pixels.")
                 self.robot_controller.set_move_cmd(0.0, self.turn_vel_slow)
             
             
             # self.robot_controller.set_move_cmd(0.0, 1.0)
-            self.vel.linear.x = 1
-            self.pub.publish(self.vel)
+            # self.vel.linear.x = 1
+            # self.pub.publish(self.vel)
 
             self.robot_controller.publish()
             self.rate.sleep()
