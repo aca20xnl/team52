@@ -11,7 +11,7 @@ from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 
 # Import some other modules from within this package
-from tb3 import Tb3Move
+from tb3 import Tb3Move, Tb3Odometry, Tb3LaserScan
 
 # setup a cmd_vel publisher and an odom subscriber:
 from geometry_msgs.msg import Twist
@@ -19,6 +19,7 @@ from geometry_msgs.msg import Point
 from math import sqrt, pow, pi, atan2
 from tf.transformations import euler_from_quaternion
 from nav_msgs.msg import Odometry
+
 
 
 
@@ -77,6 +78,14 @@ class colour_search(object):
         self.y0 = 0.0
         self.theta_z0 = 0.0
         self.startup=True
+        self.current_theta_z=0
+        self.turn_right=False
+        self.turn_left=True
+        self.tb3_lidar = Tb3LaserScan()
+        self.move=False
+        self.turn=False
+        self.move_forward=False
+        self.vel_cmd = Twist()
 
         self.hasPrint = False
 
@@ -175,38 +184,92 @@ class colour_search(object):
         while not self.ctrl_c:
             
             # get initial yaw value
-            current_theta_z=self.theta_z
+           
             self.search = False
+            
+            
             countc_0 = 0            
             countc_1 = 0
             countc_2 = 0
             countc_3 = 0
             countc_4 = 0
 
-            # START ZONE C - BLUE 
+            #START ZONE C - BLUE 
             if self.x0 >= 2.0 and self.x0 <= 2.1 and self.y0 >= 1.9 and self.y0 <= 2.0:
+                
 
-                if abs(self.theta_z0 - current_theta_z) <= pi/2:
-                    self.vel = Twist()
-                    self.vel.angular.z = 0.2                   
-                    self.pub.publish(self.vel)
+                if self.turn_left:
+                    if abs(self.theta_z0 - self.theta_z) <= pi/2:
+                        self.vel = Twist()
+                        self.vel.angular.z = 0.2                   
+                        self.pub.publish(self.vel)
+                    else:
+                        self.vel = Twist()
+                        self.vel.angular.z = 0.0
+                        self.current_theta_z=self.theta_z
+                        self.pub.publish(self.vel)
+                        self.turn_right=True
+                        self.turn_left=False
+
+                if self.turn_right:
+                    if abs(self.current_theta_z - self.theta_z) <= pi/2:
+ 
+                        self.vel = Twist()
+                        self.vel.angular.z = -0.2                   
+                        self.pub.publish(self.vel)
+                    else:
+                        self.vel = Twist()
+                        self.vel.angular.z = 0.0
+                        self.pub.publish(self.vel)
+                        self.move=True
+                        self.turn_right=False
+
+
+          
+            
+            while self.move:
+                if self.y<=1.98 and self.y>=1.48:
+                  self.vel = Twist()
+                  self.vel.linear.x = 0.2                   
+                  self.pub.publish(self.vel)
                 else:
-                    self.vel = Twist()
-                    self.vel.angular.z = 0.0
-                    self.pub.publish(self.vel)
-                    self.prepare = True
+                    self.turn=True
+                    self.move=False
+                    self.current_theta_z=self.theta_z
+                    self.x0 = self.x
+                    self.y0 = self.y
 
-            while self.prepare:
-                countc_0 += 1
-                self.vel = Twist()
-                self.vel.angular.z = -0.2                   
-                self.pub.publish(self.vel)
+            wait=0
+            
+            if self.turn:
+                    if abs(self.current_theta_z - self.theta_z) <= pi/2:
+ 
+                        self.vel = Twist()
+                        self.vel.angular.z = -0.2                   
+                        self.pub.publish(self.vel)
+                    else:
+                        self.vel = Twist()
+                        self.vel.angular.z = 0.0
+                        self.pub.publish(self.vel)
+                        self.turn=False
+                        self.move_forward=True
 
-                while countc_0>80000:
-                    self.vel = Twist()
-                    self.vel.angular.z = 0.0                   
-                    self.pub.publish(self.vel)
-                    self.prepare = False
+            while self.move_forward:
+                if self.y<=1.98 and self.y>=1.48:
+                  self.vel = Twist()
+                  self.vel.linear.x = 0.2                   
+                  self.pub.publish(self.vel)
+                else:
+                    self.turn=True
+                    self.move=False
+                    self.current_theta_z=self.theta_z
+                    self.x0 = self.x
+                    self.y0 = self.y
+
+
+
+
+               
 
                     
             
