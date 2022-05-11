@@ -15,7 +15,8 @@ from tb3 import Tb3Move
 
 # setup a cmd_vel publisher and an odom subscriber:
 from geometry_msgs.msg import Twist
-from math import sqrt, pow, pi
+from geometry_msgs.msg import Point
+from math import sqrt, pow, pi, atan2
 from tf.transformations import euler_from_quaternion
 from nav_msgs.msg import Odometry
 
@@ -52,12 +53,22 @@ class colour_search(object):
 
         self.rate = rospy.Rate(5)#
         self.vel = Twist()
+
+        self.search = False
+        self.get_ready = False
+        self.move_to_target = False
+        self.stop = False
+        self.turn = False
+        self.go = False
+
+        self.prepare = False
         
-        self.m00_blue = 0
-        self.m00_red = 0
-        self.m00_green = 0
-        self.m00_turq = 0
+        self.m00 = 0
         self.m00_min = 10000
+
+        self.goalc = Point()
+        self.goalc.x = -1.46
+        self.goalc.y = 0.23
 
         self.x = 0.0
         self.y = 0.0
@@ -66,6 +77,8 @@ class colour_search(object):
         self.y0 = 0.0
         self.theta_z0 = 0.0
         self.startup=True
+
+        self.hasPrint = False
 
 
         # Task 3  
@@ -97,75 +110,40 @@ class colour_search(object):
 
         #  Task 3
         # create a single mask to accommodate all four dectection colours:
-        # for i in range(4):
-        #     if i == 0:
-        #         mask = cv2.inRange(hsv_img, self.lower[i], self.upper[i])
-        #     else:
-        #         mask = mask + cv2.inRange(hsv_img, self.lower[i], self.upper[i])
+        for i in range(4):
+            if i == 0:
+                mask = cv2.inRange(hsv_img, self.lower[i], self.upper[i])
+            else:
+                mask = mask + cv2.inRange(hsv_img, self.lower[i], self.upper[i])
 
-        # for i in range(2):
-        #     if i == 0:
-        #         mask = cv2.inRange(hsv_img, (115, 224, 100), (130, 255, 255))
-        #         print("SEARCH INITIATED: The target beacon colour is blue.")
-        #     # elif i == 1:
-        #     #     mask = cv2.inRange(hsv_img, (25, 150, 100), (70, 255, 255))
-        #     #     print("SEARCH INITIATED: The target beacon colour is green.")
-        #     else:
-        #         # mask = mask + cv2.inRange(hsv_img, self.lower[i], self.upper[i])
-        #         mask = cv2.inRange(hsv_img, (25, 150, 100), (70, 255, 255))
-        #         print("SEARCH INITIATED: The target beacon colour is green.")
+        pixel_center = hsv_img[crop_y,crop_x]
+        hue_value = pixel_center[0]
+       
+        # hasPrint = False
+        if self.m00 > self.m00_min and self.cy >= 560-100 and self.cy <= 560+100:
+            if hue_value >= 115 and hue_value <= 130:
+                if self.hasPrint == False:
+                    print("SEARCH INITIATED: The target beacon colour is Blue.")
+                    self.hasPrint = True
+            elif hue_value >= 1 and hue_value <= 10:
+                if self.hasPrint == False:
+                    print("SEARCH INITIATED: The target beacon colour is Red.")
+                    self.hasPrint = True
+            elif hue_value >= 25 and hue_value <= 70:
+                if self.hasPrint == False:
+                    print("SEARCH INITIATED: The target beacon colour is Green.")
+                    self.hasPrint = True
+            if hue_value >= 75 and hue_value <= 100:
+                if self.hasPrint == False:
+                    print("SEARCH INITIATED: The target beacon colour is Turquoise.")
+                    self.hasPrint = True
         
-        # Code for blue pillar
-        lower_blue = (115, 224, 100)
-        upper_blue = (130, 255, 255)
-        mask_blue = cv2.inRange(hsv_img, lower_blue, upper_blue)
-        res_blue = cv2.bitwise_and(crop_img, crop_img, mask = mask_blue)
+        m = cv2.moments(mask)
+        self.m00 = m['m00']
+        self.cy = m['m10'] / (m['m00'] + 1e-5)
 
-        m_blue = cv2.moments(mask_blue)
-        self.m00_blue = m_blue['m00']
-        self.cy_blue = m_blue['m10'] / (m_blue['m00'] + 1e-5)
-
-        if self.m00_blue > self.m00_min:
-            cv2.circle(crop_img, (int(self.cy_blue), 200), 10, (0, 0, 255), 2)
-
-        # Code for red pillar
-        lower_red = (0, 185, 100)
-        upper_red = (10, 255, 255)
-        mask_red = cv2.inRange(hsv_img, lower_red, upper_red)
-        res_red = cv2.bitwise_and(crop_img, crop_img, mask = mask_red)
-
-        m_red = cv2.moments(mask_red)
-        self.m00_red = m_red['m00']
-        self.cy_red = m_red['m10'] / (m_red['m00'] + 1e-5)
-
-        if self.m00_red > self.m00_min:
-            cv2.circle(crop_img, (int(self.cy_red), 200), 10, (0, 0, 255), 2)
-            
-        # Code for green pillar
-        lower_green = (25, 150, 100)
-        upper_green = (70, 255, 255)
-        mask_green = cv2.inRange(hsv_img, lower_green, upper_green)
-        res_green = cv2.bitwise_and(crop_img, crop_img, mask = mask_green)
-
-        m_green = cv2.moments(mask_green)
-        self.m00_green = m_green['m00']
-        self.cy_green = m_green['m10'] / (m_green['m00'] + 1e-5)
-
-        if self.m00_green > self.m00_min:
-            cv2.circle(crop_img, (int(self.cy_green), 200), 10, (0, 0, 255), 2)
-
-        # Code for turquoise pillar
-        lower_turq = (75, 150, 100)
-        upper_turq = (100, 255, 255)
-        mask_turq = cv2.inRange(hsv_img, lower_turq, upper_turq)
-        res_turq = cv2.bitwise_and(crop_img, crop_img, mask = mask_turq)
-
-        m_turq = cv2.moments(mask_turq)
-        self.m00_turq = m_turq['m00']
-        self.cy_turq = m_turq['m10'] / (m_turq['m00'] + 1e-5)
-
-        if self.m00_turq > self.m00_min:
-            cv2.circle(crop_img, (int(self.cy_turq), 200), 10, (0, 0, 255), 2)
+        if self.m00 > self.m00_min:
+            cv2.circle(crop_img, (int(self.cy), 200), 10, (0, 0, 255), 2)
 
         cv2.imshow('cropped image', crop_img)
         cv2.waitKey(1)
@@ -193,188 +171,44 @@ class colour_search(object):
             self.theta_z0 = self.theta_z
 
     def main(self):
-        # while not self.ctrl_c:
-            # if self.stop_counter > 0:
-                # self.stop_counter -= 1
 
-            # If the robot can't see a blue pillar then it turns on the spot quickly.
-            
-            # Once detected, the centroid of the blue blob representing the pillar is 
-            # calculated to obtain its current location in the robot's viewpoint.
-            
-            # As soon as the blue pillar comes into view the robot starts to turn more 
-            # slowly instead.
-            
-            # The robot stops turning as soon as it determines that the pillar is situated 
-            # directly in front of it, using the cy component of the blue blob centroid to 
-            # determine this.
-            
-            # The robot then waits for a while and then starts to turn again.
-            
-            # The whole process repeats until it finds the blue pillar once again. 
-
-            
-            # turn_right=False
-            # turn_left=False
-            # wait = 0
-
-            # if self.startup:
-            #     self.turn=True
-
-            # while self.turn:
-            #     if abs(self.theta_z0 - self.theta_z) >= pi/2 and wait > 5:
-            #         # If the robot has turned 90 degrees (in radians) then stop turning
-            #         self.turn = False
-            #         self.vel = Twist()
-            #         self.theta_z0 = self.theta_z
-            #         status = "turn-fwd transition"
-            #         wait = 0
-
-            #     else:
-            #         self.vel = Twist()
-            #         self.vel.angular.z = -0.2
-            #         status = "turning"
-            #         wait += 1
-            #     self.pub.publish(self.vel)
-
-            # while not self.turn and abs(self.theta_z0 - self.theta_z) >= pi/2:
-
-            #     # TURQUOISE 
-            #     if self.m00_turq > self.m00_min:
-            #         # turquoise blob detected
-            #         if self.cy_turq >= 560-100 and self.cy_turq <= 560+100:
-            #             if self.move_rate == 'slow':
-            #                 self.move_rate = 'stop'
-            #                 print("SEARCH INITIATED: The target beacon colour is turquoise.")
-            #                 while self.move_rate == 'stop':
-            #                     self.vel.linear.x = 1
-            #                     self.pub.publish(self.vel)
-            #         else:
-            #                 self.move_rate = 'slow'
-            #     else:
-            #             self.move_rate = 'fast'
-
-               
-        status = ""
         while not self.ctrl_c:
-
-
             
-            
-            # BLUE
-            if self.m00_blue > self.m00_min:
-                # blue blob detected
-                if self.cy_blue >= 560-100 and self.cy_blue <= 560+100:
-                    if self.move_rate == 'slow':
-                        self.move_rate = 'stop'
-                        print("SEARCH INITIATED: The target beacon colour is blue.")
-                        status = "can start moving"
-                        # while status == "can start moving":
-                        #     self.robot_controller.set_move_cmd(0.0, 0.0)
-                            # self.vel.linear.x = 1
-                            # self.pub.publish(self.vel)
+            # get initial yaw value
+            current_theta_z=self.theta_z
+            self.search = False
+            countc_0 = 0            
+            countc_1 = 0
+            countc_2 = 0
+            countc_3 = 0
+            countc_4 = 0
+
+            # START ZONE C - BLUE 
+            if self.x0 >= 2.0 and self.x0 <= 2.1 and self.y0 >= 1.9 and self.y0 <= 2.0:
+
+                if abs(self.theta_z0 - current_theta_z) <= pi/2:
+                    self.vel = Twist()
+                    self.vel.angular.z = 0.2                   
+                    self.pub.publish(self.vel)
                 else:
-                    self.move_rate = 'slow'
-            else:
-                self.move_rate = 'fast'
+                    self.vel = Twist()
+                    self.vel.angular.z = 0.0
+                    self.pub.publish(self.vel)
+                    self.prepare = True
 
-            # # RED
-            # if self.m00_red > self.m00_min:
-            #     # red blob detected
-            #     if self.cy_red >= 560-100 and self.cy_red <= 560+100:
-            #         if self.move_rate == 'slow':
-            #             self.move_rate = 'stop'
-            #             print("SEARCH INITIATED: The target beacon colour is red.")
-            #             while self.move_rate == 'stop':
-            #                 self.vel.linear.x = 1
-            #                 self.pub.publish(self.vel)
-            #     else:
-            #         self.move_rate = 'slow'
-            # else:
-            #     self.move_rate = 'fast'
+            while self.prepare:
+                countc_0 += 1
+                self.vel = Twist()
+                self.vel.angular.z = -0.2                   
+                self.pub.publish(self.vel)
 
-            # # GREEN 
-            # if self.m00_green > self.m00_min:
-            #     # green blob detected
-            #     if self.cy_green >= 560-100 and self.cy_green <= 560+100:
-            #         if self.move_rate == 'slow':
-            #             self.move_rate = 'stop'
-            #             print("SEARCH INITIATED: The target beacon colour is green.")
-            #             while self.move_rate == 'stop':
-            #                 self.vel.linear.x = 1
-            #                 self.pub.publish(self.vel)
-            #     else:
-            #         self.move_rate = 'slow'
-            # else:
-            #     self.move_rate = 'fast'
+                while countc_0>80000:
+                    self.vel = Twist()
+                    self.vel.angular.z = 0.0                   
+                    self.pub.publish(self.vel)
+                    self.prepare = False
 
-            # # TURQUOISE 
-            # if self.m00_turq > self.m00_min:
-            #     # turquoise blob detected
-            #     if self.cy_turq >= 560-100 and self.cy_turq <= 560+100:
-            #         if self.move_rate == 'slow':
-            #             self.move_rate = 'stop'
-            #             print("SEARCH INITIATED: The target beacon colour is turquoise.")
-            #             while self.move_rate == 'stop':
-            #                 self.vel.linear.x = 1
-            #                 self.pub.publish(self.vel)
-            #     else:
-            #         self.move_rate = 'slow'
-            # else:
-            #     self.move_rate = 'fast'
-
-
-            # self.vel.linear.x = 0
-            # self.vel.angular.z = 0.5
-            # # self.pub.publish(self.vel)
-            # duration = rospy.get_rostime()
-
-            # while duration.secs<6:
-            #     self.pub.publish(self.vel)
-
-            # self.vel.linear.x = 0
-            # self.vel.angular.z = 0
-            # self.pub.publish(self.vel)
-
-
-            # TURQUOISE 
-            # if self.m00_turq > self.m00_min:
-            #     # turquoise blob detected
-            #     if self.cy_turq >= 560-100 and self.cy_turq <= 560+100:
-            #         if self.move_rate == 'slow':
-            #             self.move_rate = 'stop'
-            #             print("SEARCH INITIATED: The target beacon colour is turquoise.")
-            #             while self.move_rate == 'stop':
-            #                 self.vel.linear.x = 1
-            #                 self.pub.publish(self.vel)
-            #     else:
-            #         self.move_rate = 'slow'
-            # else:
-            #     self.move_rate = 'fast'
-
-    
-                
-                
-            if self.move_rate == 'fast':
-                # print("MOVING FAST: I can't see anything at the moment, scanning the area...")
-                self.robot_controller.set_move_cmd(0.0, self.turn_vel_fast)
-            elif self.move_rate == 'slow':
-                # print(f"MOVING SLOW: A blob of colour of size {self.m00_turq:.0f} pixels is in view at y-position: {self.cy_turq:.0f} pixels.")
-                self.robot_controller.set_move_cmd(0.0, self.turn_vel_slow)
-            elif self.move_rate == 'stop':
-                # print(f"STOPPED: The blob of colour is now dead-ahead at y-position {self.cy:.0f} pixels.")
-                self.robot_controller.set_move_cmd(0.0, 0.0)
-            else:
-                # print(f"MOVING SLOW: A blob of colour of size {self.m00_turq:.0f} pixels is in view at y-position: {self.cy:.0f} pixels.")
-                self.robot_controller.set_move_cmd(0.0, self.turn_vel_slow)
-            
-            
-            # self.robot_controller.set_move_cmd(0.0, 1.0)
-            # self.vel.linear.x = 1
-            # self.pub.publish(self.vel)
-
-            self.robot_controller.publish()
-            self.rate.sleep()
+                    
             
 if __name__ == '__main__':
     search_instance = colour_search()
