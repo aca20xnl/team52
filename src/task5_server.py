@@ -91,18 +91,9 @@ class Task3(object):
         elif not front_has_spaces and not front_left_has_spaces and not left_has_spaces:
             current_move = 'turn right'
             print("turned right as there's no space on front and left side")
-        elif front_has_spaces and front_right_has_spaces and right_has_spaces:
-            current_move = 'turn right'
-            print("moved right as there's lots of space on front and right side")
-        elif front_has_spaces and front_right_has_spaces and not right_has_spaces:
-            current_move = 'turn right'
-            print("moved right as there's enough space on right side")
         elif front_has_spaces and not front_right_has_spaces and not right_has_spaces:
-            current_move = 'go straight'
-            print("turned left as there's very little space on right side")
-        elif not front_has_spaces and not front_right_has_spaces and not right_has_spaces:
             current_move = 'turn left'
-            print("turned left as there's no space on front and right side")
+            print("turned left as there's very little space on right side")
         return
         
         
