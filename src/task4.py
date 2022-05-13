@@ -11,103 +11,48 @@ from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import LaserScan
 from sensor_msgs.msg import Image
 
-class avoid_client(object):
-   
-    def feedback_callback(self, feedback_data):
-        if self.firstin:
-            self.inityaw = feedback_data.current_angle
-            #print self.inityaw
-            self.firstin = False
-            self.search_angle = self.inityaw
-        self.current_angle = feedback_data.current_angle
+# Import some other modules from within this package
+from tb3 import Tb3Move, Tb3Odometry, Tb3LaserScan
+
+# setup a cmd_vel publisher and an odom subscriber:
+from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Point
+from math import sqrt, pow, pi, atan2
+from tf.transformations import euler_from_quaternion
+from nav_msgs.msg import Odometry
+
+
+
+
+class colour_search(object):
 
     def __init__(self):
         
-        self.goal = CameraSweepGoal()
-        
-        self.client = actionlib.SimpleActionClient("/task3_server", CameraSweepAction)
-        self.client.wait_for_server()
-        self.firstin=True
+        self.m00 = 0
+        self.m00_min = 10000
 
-        self.scan_subscriber = rospy.Subscriber("/scan",
-            LaserScan, self.scan_callback)
-        rospy.sleep(0.5)
-        self.send_goal(0,0)
-        rospy.sleep(0.5)
-        self.image_subscriber = rospy.Subscriber("/camera/rgb/image_raw", Image, self.camera_callback)
-        rate = rospy.Rate(10)
-        #find target color 
-        while not rospy.is_shutdown():
-            desired_angle = self.inityaw+180
-            if desired_angle>360:
-                desired_angle = desired_angle - 360
-            self.send_goal(desired_angle,0)
-            if abs(self.current_angle-desired_angle)<2 or abs(abs(self.current_angle-desired_angle)-360)<2:
-                if self.cx_red !=0:
-                    self.hasfind=True
-                    self.targetcolour=1
-                    print("SEARCH INITIATED: The target beacon colour is Red")
-                if self.cx_green !=0:
-                    self.hasfind=True
-                    self.targetcolour=2
-                    print ("SEARCH INITIATED: The target beacon colour is Green") 
-                if self.cx_blue !=0:
-                    self.hasfind=True
-                    self.targetcolour=3
-                    print("SEARCH INITIATED: The target beacon colour is Blue")
-                if self.cx_Turquoise !=0:
-                    self.hasfind=True
-                    self.targetcolour=4
-                    print("SEARCH INITIATED: The target beacon colour is Turquoise")
-                if self.cx_Purple !=0:
-                    self.hasfind=True
-                    self.targetcolour=5
-                    print("SEARCH INITIATED: The target beacon colour is Purple")
-                if self.cx_yellow !=0:
-                    self.hasfind=True
-                    self.targetcolour=6
-                    print("SEARCH INITIATED: The target beacon colour is yellow")
-                break;
-            rate.sleep()
-        #turn to init yaw    
-        while not rospy.is_shutdown():
-            self.send_goal(self.inityaw,0)
-            if abs(self.current_angle-self.inityaw)<0.5 or abs(abs(self.current_angle-self.inityaw)-360)<0.5:
-                break;
-            rate.sleep()
+        self.goalc = Point()
+        self.goalc.x = -1.46
+        self.goalc.y = 0.23
 
-        #start moving     
-        while not rospy.is_shutdown():
-            if((self.targetcolour==1 and self.detectred) or (self.targetcolour==2 and self.detectgreen) or (self.targetcolour==3 and self.detectblue) or (self.targetcolour==4 and self.detectTurquoise) or (self.targetcolour==5 and self.detectPurple) or (self.targetcolour==6 and self.detectyellow)):
-                print("BEACON DETECTED: Beaconing initiated.")
-                break
-            else:
-                if self.front<0.6 and (abs(self.current_angle-self.search_angle)<5 or abs(abs(self.current_angle-self.search_angle)-360)<5):
-                    self.search_angle = self.judge_desired_angle()    
-                self.send_goal(self.search_angle,7)
-            rate.sleep()
-           
-        #approach target color    
-        while not rospy.is_shutdown():
-            if self.targetcolour==1:
-                self.imageerror=(960.0-self.cx_red)/100
-            if self.targetcolour==2:
-                self.imageerror=(650.0-self.cx_green)/100    
-            if self.targetcolour==3:
-                self.imageerror=(900.0-self.cx_blue)/100
-            if self.targetcolour==4:
-                self.imageerror=(960.0-self.cx_Turquoise)/100
-            if self.targetcolour==5:
-                self.imageerror=(960.0-self.cx_Purple)/100
-            if self.targetcolour==6:
-                self.imageerror=(960.0-self.cx_yellow)/100
+        self.x = 0.0
+        self.y = 0.0
+        self.theta_z = 0.0
+        self.x0 = 0.0
+        self.y0 = 0.0
+        self.theta_z0 = 0.0
+        self.startup=True
+        self.current_theta_z=0
+        self.turn_right=False
+        self.turn_left=True
+        self.tb3_lidar = Tb3LaserScan()
+        self.move=False
+        self.turn=False
+        self.move_forward=False
+        self.vel_cmd = Twist()
 
-            if abs(self.imageerror)<10 and self.min_distance<0.27:
-                self.send_goal(self.current_angle,0)
-                print("BEACONING COMPLETE: The robot has now stopped.") 
-            else:
-                self.send_goal(self.imageerror,self.targetcolour)
-            rate.sleep()
+        self.hasPrint = False
+
 
     def scan_callback(self, scan_data):
         self.front = min(min(scan_data.ranges[0:20]),min(scan_data.ranges[340:359]))
@@ -205,7 +150,110 @@ class avoid_client(object):
         # send the goal to the action server:
         self.client.send_goal(self.goal, feedback_cb=self.feedback_callback)
         
+        self.x = pos_x
+        self.y = pos_y
+        self.theta_z = yaw 
 
+        if self.startup:
+            self.startup = False
+            self.x0 = self.x
+            self.y0 = self.y
+            self.theta_z0 = self.theta_z
+
+    def main(self):
+
+        while not self.ctrl_c:
+            
+            # get initial yaw value
+           
+            self.search = False
+            
+            
+            countc_0 = 0            
+            countc_1 = 0
+            countc_2 = 0
+            countc_3 = 0
+            countc_4 = 0
+
+            #START ZONE C - BLUE 
+            if self.x0 >= 2.0 and self.x0 <= 2.1 and self.y0 >= 1.9 and self.y0 <= 2.0:
+                
+
+                if self.turn_left:
+                    if abs(self.theta_z0 - self.theta_z) <= pi/2:
+                        self.vel = Twist()
+                        self.vel.angular.z = 0.2                   
+                        self.pub.publish(self.vel)
+                    else:
+                        self.vel = Twist()
+                        self.vel.angular.z = 0.0
+                        self.current_theta_z=self.theta_z
+                        self.pub.publish(self.vel)
+                        self.turn_right=True
+                        self.turn_left=False
+
+                if self.turn_right:
+                    if abs(self.current_theta_z - self.theta_z) <= pi/2:
+ 
+                        self.vel = Twist()
+                        self.vel.angular.z = -0.2                   
+                        self.pub.publish(self.vel)
+                    else:
+                        self.vel = Twist()
+                        self.vel.angular.z = 0.0
+                        self.pub.publish(self.vel)
+                        self.move=True
+                        self.turn_right=False
+
+
+          
+            
+            while self.move:
+                if self.y<=1.98 and self.y>=1.48:
+                  self.vel = Twist()
+                  self.vel.linear.x = 0.2                   
+                  self.pub.publish(self.vel)
+                else:
+                    self.turn=True
+                    self.move=False
+                    self.current_theta_z=self.theta_z
+                    self.x0 = self.x
+                    self.y0 = self.y
+
+            wait=0
+            
+            if self.turn:
+                    if abs(self.current_theta_z - self.theta_z) <= pi/2:
+ 
+                        self.vel = Twist()
+                        self.vel.angular.z = -0.2                   
+                        self.pub.publish(self.vel)
+                    else:
+                        self.vel = Twist()
+                        self.vel.angular.z = 0.0
+                        self.pub.publish(self.vel)
+                        self.turn=False
+                        self.move_forward=True
+
+            while self.move_forward:
+                if self.y<=1.98 and self.y>=1.48:
+                  self.vel = Twist()
+                  self.vel.linear.x = 0.2                   
+                  self.pub.publish(self.vel)
+                else:
+                    self.turn=True
+                    self.move=False
+                    self.current_theta_z=self.theta_z
+                    self.x0 = self.x
+                    self.y0 = self.y
+
+
+
+
+               
+
+                    
+            
 if __name__ == '__main__':
     rospy.init_node("task3_client")
     avoid_client()
