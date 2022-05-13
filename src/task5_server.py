@@ -78,19 +78,8 @@ class Task3(object):
         front_right_has_spaces = arcs['front_right_arc'] > right_dist_from_wall
         right_has_spaces = arcs['right_arc'] > right_dist_from_wall
 
-        if front_has_spaces and front_right_has_spaces and right_has_spaces:
-            current_move = 'turn right'
-            print("moved right as there's lots of space on front and right side")
-        elif front_has_spaces and front_right_has_spaces and not right_has_spaces:
-            current_move = 'turn right'
-            print("moved right as there's enough space on right side")
-        elif front_has_spaces and not front_right_has_spaces and not right_has_spaces:
-            current_move = 'go straight'
-            print("turned left as there's very little space on right side")
-        elif not front_has_spaces and not front_right_has_spaces and not right_has_spaces:
-            current_move = 'turn left'
-            print("turned left as there's no space on front and right side")
-        elif front_has_spaces and front_left_has_spaces and left_has_spaces:
+        
+        if front_has_spaces and front_left_has_spaces and left_has_spaces:
             current_move = 'turn left'
             print("moved left as there's lots of space on front and left side")
         elif front_has_spaces and front_left_has_spaces and not left_has_spaces:
@@ -102,6 +91,43 @@ class Task3(object):
         elif not front_has_spaces and not front_left_has_spaces and not left_has_spaces:
             current_move = 'turn right'
             print("turned right as there's no space on front and left side")
+        elif front_has_spaces and front_right_has_spaces and right_has_spaces:
+            current_move = 'turn right'
+            print("moved right as there's lots of space on front and right side")
+        elif front_has_spaces and front_right_has_spaces and not right_has_spaces:
+            current_move = 'turn right'
+            print("moved right as there's enough space on right side")
+        elif front_has_spaces and not front_right_has_spaces and not right_has_spaces:
+            current_move = 'go straight'
+            print("turned left as there's very little space on right side")
+        elif not front_has_spaces and not front_right_has_spaces and not right_has_spaces:
+            current_move = 'turn left'
+            print("turned left as there's no space on front and right side")
+        return
+        
+        
+        
+        # elif front_has_spaces and front_right_has_spaces and not right_has_spaces:
+        #     current_move = 'turn right'
+        #     print("moved straight as there's enough space on right side")
+        # elif front_has_spaces and not front_right_has_spaces and not right_has_spaces:
+        #     current_move = 'go straight'
+        #     print("turned left as there's very little space on right side")
+        # elif not front_has_spaces and not front_right_has_spaces and not right_has_spaces:
+        #     current_move = 'turn left'
+        #     print("turned right as there's no space on front and right side")
+        # elif front_has_spaces and front_left_has_spaces and left_has_spaces:
+        #     current_move = 'turn right'
+        #     print("moved left as there's lots of space on front and left side")
+        # elif front_has_spaces and front_left_has_spaces and not left_has_spaces:
+        #     current_move = 'turn right'
+        #     print("moved straight as there's enough space on left side")
+        # elif front_has_spaces and not front_left_has_spaces and not left_has_spaces:
+        #     current_move = 'go straight'
+        #     print("turned right as there's very little space on left side")
+        # elif not front_has_spaces and not front_left_has_spaces and not left_has_spaces:
+        #     current_move = 'turn right'
+        #     print("turned left as there's no space on front and left side")
         return
 
     def action_server_launcher(self, goal):
