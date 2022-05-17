@@ -1,212 +1,235 @@
-#! /usr/bin/env python3
+#!/usr/bin/env python3
 
 import rospy
 import actionlib
 
-# from com2009_actions.msg import CameraSweepAction, CameraSweepGoal
-from com2009_msgs.msg import CameraSweepAction, CameraSweepGoal, CameraSweepFeedback
+from com2009_msgs.msg import CameraSweepAction, CameraSweepGoal
 import numpy
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
-from sensor_msgs.msg import LaserScan
 from sensor_msgs.msg import Image
+from task4_tb3 import Tb3LaserScan
 
-class avoid_client(object):
+class Client(object):
    
     def feedback_callback(self, feedback_data):
-        if self.firstin:
-            self.inityaw = feedback_data.current_angle
-            #print self.inityaw
-            self.firstin = False
-            self.search_angle = self.inityaw
-        self.current_angle = feedback_data.current_angle
+        if self.init:
+            #initial angle
+            self.initial_angle = feedback_data.current_angle
+            self.init = False
+            self.search_angle = self.initial_angle 
+
+        #current angle
+        self.current_arc = feedback_data.current_angle
 
     def __init__(self):
-        
-        self.goal = CameraSweepGoal()
-        
-        self.client = actionlib.SimpleActionClient("/task3_server", CameraSweepAction)
-        self.client.wait_for_server()
-        self.firstin=True
 
-        self.scan_subscriber = rospy.Subscriber("/scan",
-            LaserScan, self.scan_callback)
-        rospy.sleep(0.5)
-        self.send_goal(0,0)
+        self.init=True
+
+        self.goal = CameraSweepGoal()
+        self.tb3_lidar = Tb3LaserScan()
+        
+        
+        
+        self.client = actionlib.SimpleActionClient("/task4_server", CameraSweepAction)
+        self.client.wait_for_server()
+        
+
+        
+        self.send_goal(0,100)
         rospy.sleep(0.5)
         self.image_subscriber = rospy.Subscriber("/camera/rgb/image_raw", Image, self.camera_callback)
         rate = rospy.Rate(10)
-        #find target color 
-        while not rospy.is_shutdown():
-            desired_angle = self.inityaw+180
-            if desired_angle>360:
-                desired_angle = desired_angle - 360
-            self.send_goal(desired_angle,0)
-            if abs(self.current_angle-desired_angle)<2 or abs(abs(self.current_angle-desired_angle)-360)<2:
-                if self.cx_red !=0:
-                    self.hasfind=True
-                    self.targetcolour=1
-                    print("SEARCH INITIATED: The target beacon colour is Red")
-                if self.cx_green !=0:
-                    self.hasfind=True
-                    self.targetcolour=2
-                    print ("SEARCH INITIATED: The target beacon colour is Green") 
-                if self.cx_blue !=0:
-                    self.hasfind=True
-                    self.targetcolour=3
-                    print("SEARCH INITIATED: The target beacon colour is Blue")
-                if self.cx_Turquoise !=0:
-                    self.hasfind=True
-                    self.targetcolour=4
-                    print("SEARCH INITIATED: The target beacon colour is Turquoise")
-                if self.cx_Purple !=0:
-                    self.hasfind=True
-                    self.targetcolour=5
-                    print("SEARCH INITIATED: The target beacon colour is Purple")
-                if self.cx_yellow !=0:
-                    self.hasfind=True
-                    self.targetcolour=6
-                    print("SEARCH INITIATED: The target beacon colour is yellow")
-                break;
-            rate.sleep()
-        #turn to init yaw    
-        while not rospy.is_shutdown():
-            self.send_goal(self.inityaw,0)
-            if abs(self.current_angle-self.inityaw)<0.5 or abs(abs(self.current_angle-self.inityaw)-360)<0.5:
-                break;
-            rate.sleep()
 
-        #start moving     
-        while not rospy.is_shutdown():
-            if((self.targetcolour==1 and self.detectred) or (self.targetcolour==2 and self.detectgreen) or (self.targetcolour==3 and self.detectblue) or (self.targetcolour==4 and self.detectTurquoise) or (self.targetcolour==5 and self.detectPurple) or (self.targetcolour==6 and self.detectyellow)):
-                print("BEACON DETECTED: Beaconing initiated.")
+        
+        self.sense_blue=False
+        self.sense_red=False
+        self.sense_green=False
+        self.sense_turquiose=False
+        self.sense_yellow=False
+        self.sense_purple=False
+
+        self.shut_down= rospy.on_shutdown(self.shutdown_ops)
+
+        
+        while not self.shut_down:
+            
+            ideal_angle = self.initial_angle+90
+            if ideal_angle>360:
+                ideal_angle = ideal_angle - 360
+            self.send_goal(ideal_angle,0)
+            if abs( self.current_arc-ideal_angle)<=1 or abs(abs( self.current_arc-ideal_angle)-360)<=1:
+                if self.blue_cy !=0:
+                    self.sense_blue=True
+                    print ("SEARCH INITIATED: The target beacon colour is Blue" )
+                if self.red_cy !=0:
+                    self.sense_red=True
+                    print ("SEARCH INITIATED: The target beacon colour is Red")
+                if self.green_cy !=0:
+                    self.sense_green=True
+                    print ("SEARCH INITIATED: The target beacon colour is Green")
+                if self.turquoise_cy !=0:
+                    self.sense_turquiose=True
+                    print ("SEARCH INITIATED: The target beacon colour is Turquoise" )
+                if self.yellow_cy !=0:
+                    self.sense_yellow=True
+                    print ("SEARCH INITIATED: The target beacon colour is Yellow" )
+                if self.purple_cy !=0:
+                    self.sense_purple=True
+                    print ("SEARCH INITIATED: The target beacon colour is Purple" )
+                
                 break
-            else:
-                if self.front<0.6 and (abs(self.current_angle-self.search_angle)<5 or abs(abs(self.current_angle-self.search_angle)-360)<5):
-                    self.search_angle = self.judge_desired_angle()    
-                self.send_goal(self.search_angle,7)
             rate.sleep()
+         
+        self.move=False
+        self.continue_move=False
+        #turn back to initial angle
+        while not self.shut_down:
+
+            self.send_goal(self.initial_angle,0)
+            if (abs( abs(abs( self.current_arc-self.search_angle)-360)<=0.1 or self.current_arc-self.search_angle)<=0.1):
+                self.move=True
+                break
+            rate.sleep()
+
+        while self.move:
+            
+            if (( self.sense_blue and self.detect_blue) or (self.sense_red and self.detect_red) or (self.sense_green and self.detect_green) or (self.sense_turquiose and self.detect_turquiose) or  (self.sense_purple and self.detect_purple)):
+                print ("TARGET DETECTED : Beaconing initiated.")
+                self.continue_move=True
+                break
            
-        #approach target color    
-        while not rospy.is_shutdown():
-            if self.targetcolour==1:
-                self.imageerror=(960.0-self.cx_red)/100
-            if self.targetcolour==2:
-                self.imageerror=(650.0-self.cx_green)/100    
-            if self.targetcolour==3:
-                self.imageerror=(900.0-self.cx_blue)/100
-            if self.targetcolour==4:
-                self.imageerror=(960.0-self.cx_Turquoise)/100
-            if self.targetcolour==5:
-                self.imageerror=(960.0-self.cx_Purple)/100
-            if self.targetcolour==6:
-                self.imageerror=(960.0-self.cx_yellow)/100
 
-            if abs(self.imageerror)<10 and self.min_distance<0.27:
-                self.send_goal(self.current_angle,0)
-                print("BEACONING COMPLETE: The robot has now stopped.") 
             else:
-                self.send_goal(self.imageerror,self.targetcolour)
+                if self.tb3_lidar.front<0.6 and (abs( abs(abs( self.current_arc-self.search_angle)-360)<=0.1 or self.current_arc-self.search_angle)<=0.1 ):  
+                    self.search_angle = self.change_angle() 
+
+                    
+                self.send_goal(self.search_angle,10)
             rate.sleep()
 
-    def scan_callback(self, scan_data):
-        self.front = min(min(scan_data.ranges[0:20]),min(scan_data.ranges[340:359]))
-        self.left = min(scan_data.ranges[85:95])
-        self.right = min(scan_data.ranges[265:275])
-        self.min_distance = min(min(scan_data.ranges[0:70]),min(scan_data.ranges[290:359]))
+        
+
+        while self.continue_move:
+        
+            if self.tb3_lidar.front>0.6:
+                 self.send_goal(self.search_angle,102)
+            else:
+                if self.tb3_lidar.front<0.6:
+                    
+                  self.search_angle = self.change_angle() 
+                    
+                self.send_goal(self.search_angle,10)
+
+            rate.sleep()
+
+
+
+    def change_angle(self):
+        if self.tb3_lidar.left <= self.tb3_lidar.right:
+            if  self.current_arc>315 or  self.current_arc<45:
+                return 270
+            if  self.current_arc>45 and  self.current_arc<135:
+                return 0
+            if  self.current_arc>135 and  self.current_arc<225:
+                return 90
+            if  self.current_arc>225 or  self.current_arc<315 :
+                return 180 
+        else :
+            if  self.current_arc<45 or   self.current_arc>315:
+                return 90
+            if  self.current_arc>45 and  self.current_arc<135:
+                return 180
+            if self.current_arc>135 and  self.current_arc<225:
+                return 270
+            if  self.current_arc>225 or  self.current_arc<315:
+                return 0 
+
+           
 
     def camera_callback(self,msg):
     
         cv_img = CvBridge().imgmsg_to_cv2(msg, desired_encoding="bgr8")
         
         hsv = cv2.cvtColor(cv_img, cv2.COLOR_BGR2HSV)# turn bgr image to hsv image for detection 
-        lower_blue = numpy.array([[100, 200, 100]])
-        upper_blue = numpy.array([124, 255, 240])
-        lower_green = numpy.array([35, 110, 106])#35
-        upper_green = numpy.array([74, 255, 255])
-        lower_red = numpy.array([0, 200, 100])
-        upper_red  = numpy.array([20, 255, 255])
-        lower_Turquoise = numpy.array([90, 150, 100])
-        upper_Turquoise  = numpy.array([100, 255, 255])
-        lower_Purple = numpy.array([150, 200, 100])
-        upper_Purple = numpy.array([180, 255, 255])
-        lower_yellow = numpy.array([30, 200, 100])
-        upper_yellow = numpy.array([50, 255, 255])
+        #Thresholds for ["Blue", "Red", "Green", "Turquoise","Yellow","Purple"]
+        self.lower = [(115, 224, 100), (0, 185, 100), (25, 150, 100), (75, 150, 100),(30, 200, 100),(140, 200, 100)]
+        self.upper = [(130, 255, 255), (10, 255, 255), (70, 255, 255), (100, 255, 255),(45, 255, 255),(155, 200, 100)]
 
-        green_mask= cv2.inRange(hsv, lower_green, upper_green)#get the green one from the image 
-        blue_mask = cv2.inRange(hsv, lower_blue, upper_blue)#get the blue one from the image
-        red_mask = cv2.inRange(hsv, lower_red, upper_red)#get the red one from the image
-        Turquoise_mask = cv2.inRange(hsv, lower_Turquoise, upper_Turquoise)#get the Turquoise one from the image
-        Purple_mask = cv2.inRange(hsv, lower_Purple, upper_Purple)#get the  Purple one from the image
-        yellow_mask = cv2.inRange(hsv, lower_yellow, upper_yellow)#get the yellow one from the image
+        for i in range(6):
+            if i == 0:
+                blue_mask= cv2.inRange(hsv, numpy.array([115, 224, 100]),numpy.array([130, 255, 255]))
+                self.blue_m = cv2.moments(blue_mask)
+            elif i==1:
+                red_mask = cv2.inRange(hsv, numpy.array([0, 185, 100]),numpy.array([10, 255, 255]))
+                self.red_m = cv2.moments(red_mask)
+            elif i==2:
+                green_mask = cv2.inRange(hsv, numpy.array([25, 110, 105]),numpy.array([70, 255, 255]))
+                self.green_m = cv2.moments(green_mask)
+            elif i==3:
+                turquoise_mask = cv2.inRange(hsv,numpy.array([75, 150, 100]),numpy.array([100, 255, 255]))
+                self.turquoise_m = cv2.moments(turquoise_mask)
+            elif i==4:
+                yellow_mask = cv2.inRange(hsv, numpy.array([30, 200, 100]),numpy.array([45, 255, 255]))
+                self.yellow_m = cv2.moments(yellow_mask)
+            elif i==5:
+                purple_mask = cv2.inRange(hsv, numpy.array([140, 200, 100]),numpy.array([155, 200, 100]))
+                self.purple_m = cv2.moments(purple_mask)
 
-        red_M = cv2.moments(red_mask)#get the size of red area
-        green_M = cv2.moments(green_mask)#get the size of green area
-        blue_M = cv2.moments(blue_mask)#get the size of blue area
-        Turquoise_M = cv2.moments(Turquoise_mask)#get the size of Turquoise area
-        Purple_M = cv2.moments(Purple_mask)#get the size of Purple area
-        yellow_M = cv2.moments(yellow_mask)#get the size of yellow area
 
-        self.cx_red = int(red_M['m10']/(red_M['m00']+1e-10))
-        self.cx_green = int(green_M['m10']/(green_M['m00']+1e-10))
-        self.cx_blue = int(blue_M['m10']/(blue_M['m00']+1e-10))
-        self.cx_Turquoise = int(Turquoise_M['m10']/(Turquoise_M['m00']+1e-10))
-        self.cx_Purple = int(Purple_M['m10']/(Purple_M['m00']+1e-10))
-        self.cx_yellow = int(yellow_M['m10']/(yellow_M['m00']+1e-10))
+        self.blue_cy = int(self.blue_m['m10']/(self.blue_m['m00']+1e-10))
+        self.red_cy =int(self.red_m['m10']/(self.red_m['m00']+1e-10))
+        self.green_cy = int(self.green_m['m10']/(self.green_m['m00']+1e-10))
+        self.turquoise_cy = int(self.turquoise_m['m10']/(self.turquoise_m['m00']+1e-10))
+        self.yellow_cy = int(self.yellow_m['m10']/(self.yellow_m['m00']+1e-10))
+        self.purple_cy = int(self.purple_m['m10']/(self.purple_m['m00']+1e-10))
+        
 
-        if self.cx_red!=0 and red_M['m00'] > 100000:
-            self.detectred = True
+        if (int(self.blue_m['m10']/(self.blue_m['m00']+1e-10)))!=0 and self.blue_m['m00'] > 100000:
+            self.detect_blue = True
         else:
-            self.detectred = False
-        if self.cx_green!=0 and green_M['m00'] > 100000:
-            self.detectgreen = True
-        else:
-            self.detectgreen = False
-        if self.cx_blue!=0 and blue_M['m00'] > 100000:
-            self.detectblue = True
-        else:
-            self.detectblue = False
-        if self.cx_Turquoise!=0 and Turquoise_M['m00'] > 100000:
-            self.detectTurquoise = True
-        else:
-            self.detectTurquoise = False
-        if self.cx_Purple!=0 and Purple_M['m00'] > 100000:
-            self.detectPurple = True
-        else:
-            self.detectPurple = False
-        if self.cx_yellow!=0 and yellow_M['m00'] > 100000:
-            self.detectyellow = True
-        else:
-            self.detectyellow = False
+            self.detect_blue = False
 
-    def judge_desired_angle(self):
-        if self.left >= self.right:
-            if self.current_angle>315 or self.current_angle<45:
-                return 90
-            if self.current_angle>45 and self.current_angle<135:
-                return 180
-            if self.current_angle>135 and self.current_angle<225:
-                return 270
-            if self.current_angle>225 or self.current_angle<315:
-                return 0 
-        if self.left < self.right:
-            if self.current_angle>315 or self.current_angle<45:
-                return 270
-            if self.current_angle>45 and self.current_angle<135:
-                return 0
-            if self.current_angle>135 and self.current_angle<225:
-                return 90
-            if self.current_angle>225 or self.current_angle<315:
-                return 180 
+        if (int(self.red_m['m10']/(self.red_m['m00']+1e-10)))!=0 and self.red_m['m00'] > 100000:
+            self.detect_red = True
+        else:
+            self.detect_red = False
+
+        if (int(self.green_m['m10']/(self.green_m['m00']+1e-10)))!=0 and self.green_m['m00'] > 100000:
+            self.detect_green = True
+        else:
+             self.detect_green = False
+        
+        if(int(self.turquoise_m['m10']/(self.turquoise_m['m00']+1e-10)))!=0 and self.turquoise_m['m00'] > 100000:
+            self.detect_turquiose = True
+        else:
+            self.detect_turquiose = False
+
+        if(int(self.yellow_m['m10']/(self.yellow_m['m00']+1e-10)))!=0 and self.yellow_m['m00'] > 100000:
+            self.detect_yellow = True
+        else:
+            self.detect_yellow = False
+
+        if (int(self.purple_m['m10']/(self.purple_m['m00']+1e-10)))!=0 and self.purple_m['m00'] > 100000:
+            self.detect_purple = True
+        else:
+            self.detect_purple = False
+
 
     def send_goal(self, sweep_angle, image_count):
         self.goal.sweep_angle = sweep_angle
         self.goal.image_count = image_count
         # send the goal to the action server:
         self.client.send_goal(self.goal, feedback_cb=self.feedback_callback)
+
+    def shutdown_ops(self):
+        self.send_goal(0,0)
+        self.ctrl_c = True
+
+
         
 
 if __name__ == '__main__':
-    rospy.init_node("task3_client")
-    avoid_client()
+    rospy.init_node("task4_client")
+    Client()
     rospy.spin()
