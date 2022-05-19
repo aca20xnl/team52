@@ -17,7 +17,7 @@ class Client(object):
             #initial angle
             self.initial_angle = feedback_data.current_angle
             self.init = False
-            self.search_angle = self.initial_angle 
+            self.find_angle = self.initial_angle 
 
         #current angle
         self.current_arc = feedback_data.current_angle
@@ -48,11 +48,14 @@ class Client(object):
         self.sense_turquiose=False
         self.sense_yellow=False
         self.sense_purple=False
+        
 
         self.shut_down= rospy.on_shutdown(self.shutdown_ops)
+        self.start=True
+       
 
         
-        while not self.shut_down:
+        while self.start:
             
             ideal_angle = self.initial_angle+90
             if ideal_angle>360:
@@ -77,49 +80,64 @@ class Client(object):
                 if self.purple_cy !=0:
                     self.sense_purple=True
                     print ("SEARCH INITIATED: The target beacon colour is Purple" )
+
+                self.start=False
                 
                 break
             rate.sleep()
          
-        self.move=False
-        self.continue_move=False
+      
+        self.back=True
+      
+        
         #turn back to initial angle
-        while not self.shut_down:
+        while self.back:
 
             self.send_goal(self.initial_angle,0)
-            if (abs( abs(abs( self.current_arc-self.search_angle)-360)<=0.1 or self.current_arc-self.search_angle)<=0.1):
+            if (abs(abs(self.current_arc-self.initial_angle)-360)<=0.1) or  abs(self.current_arc-self.initial_angle)<=0.1:
                 self.move=True
+                self.back=False
                 break
             rate.sleep()
+
+       
 
         while self.move:
             
-            if (( self.sense_blue and self.detect_blue) or (self.sense_red and self.detect_red) or (self.sense_green and self.detect_green) or (self.sense_turquiose and self.detect_turquiose) or  (self.sense_purple and self.detect_purple)):
+           if (( self.sense_blue and self.detect_blue) or (self.sense_red and self.detect_red) or (self.sense_green and self.detect_green) or (self.sense_turquiose and self.detect_turquiose) or  (self.sense_purple and self.detect_purple)):
                 print ("TARGET DETECTED : Beaconing initiated.")
                 self.continue_move=True
+                self.move=False
                 break
-           
+    
 
-            else:
-                if self.tb3_lidar.front<0.6 and (abs( abs(abs( self.current_arc-self.search_angle)-360)<=0.1 or self.current_arc-self.search_angle)<=0.1 ):  
-                    self.search_angle = self.change_angle() 
+           else:
+                if self.tb3_lidar.front<0.6 and (abs( abs(abs( self.current_arc- self.find_angle)-360)<=0.1 or self.current_arc- self.find_angle)<=0.1 ):  
+                    self.find_angle = self.change_angle() 
 
                     
-                self.send_goal(self.search_angle,10)
-            rate.sleep()
+                self.send_goal(self.find_angle,10)
+           rate.sleep()
 
         
 
         while self.continue_move:
         
-            if self.tb3_lidar.front>0.6:
-                 self.send_goal(self.search_angle,102)
+            if self.tb3_lidar.min_distance>0.7:
+                 self.send_goal(self.find_angle,102)
+                
+            # elif self.tb3_lidar.min_distance<0.7 and (( self.sense_blue and self.detect_blue) or (self.sense_red and self.detect_red) or (self.sense_green and self.detect_green) or (self.sense_turquiose and self.detect_turquiose) or  (self.sense_purple and self.detect_purple)):
+            #      self.send_goal(self.search_angle,100)
             else:
-                if self.tb3_lidar.front<0.6:
+                if self.tb3_lidar.min_distance<0.7:
                     
-                  self.search_angle = self.change_angle() 
+                 self.find_angle = self.change_angle() 
                     
-                self.send_goal(self.search_angle,10)
+                self.send_goal(self.find_angle,10)
+            # elif  self.tb3_lidar.min_distance>0.6 and (int(self.green_m['m10']/(self.green_m['m00']+1e-10)))!=0 and self.green_m['m00'] > 100000:
+            #    self.send_goal(self.search_angle,102)
+            #    print(1)
+            
 
             rate.sleep()
 

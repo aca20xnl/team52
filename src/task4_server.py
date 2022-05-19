@@ -67,13 +67,16 @@ class Server(object):
         else:
             
             vel_z = self.turn(goal.sweep_angle)
-        
+            #only change velocity of angular z
             if (goal.image_count==0):
                 self.vel_controller.set_move_cmd(0,vel_z)
+            #change velocity of angular z and velocity of linear x
             elif (goal.image_count==10):
                 self.vel_controller.set_move_cmd(0.17,vel_z)
+            #change velocity of linear x
             elif (goal.image_count==102):
                 self.vel_controller.set_move_cmd(0.15,0)
+            #stop robot
             elif(goal.image_count==100):
                 self.vel_controller.set_move_cmd(0,0)
           

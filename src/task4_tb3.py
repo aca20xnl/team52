@@ -61,7 +61,12 @@ class Tb3LaserScan(object):
         front_right= (np.array(front_right_arc[::-1])).min()
         self.front= min(front_left,front_right)
 
-        self.min_distance=min(front_left,front_right)
+        min_distance_left_arc= scan_data.ranges[0:30]
+        min_distance_left= (np.array(min_distance_left_arc[::-1])).min()
+        min_distance_right_arc= scan_data.ranges[-30:]
+        min_distance_right= (np.array(min_distance_right_arc[::-1])).min()
+
+        self.min_distance=min(min_distance_left, min_distance_right)
 
 
     def __init__(self):

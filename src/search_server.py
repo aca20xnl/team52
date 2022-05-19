@@ -1,4 +1,4 @@
-#! /usr/bin/python3
+#!/usr/bin/env python3
 
 # Import the core Python modules for ROS and to implement ROS Actions:
 import rospy
@@ -64,11 +64,16 @@ class SearchActionServer(object):
       
 
     def scan_callback(self, scan_data):
-        left_arc = scan_data.ranges[0:20]
-        right_arc = scan_data.ranges[-21:]
+        left_arc = scan_data.ranges[0:11]
+        right_arc = scan_data.ranges[-10:]
         front_arc = np.array(left_arc[::-1] + right_arc[::-1])
-        self.min_distance = front_arc.min()
+        # self.min_distance = front_arc.min()
         self.object_angle = self.arc_angles[np.argmin(front_arc)]
+        self.left_angle=np.array(left_arc[::-1]).min()
+        self.right_angle=np.array(right_arc[::-1]).min()
+
+
+        self.min_distance=self.front_arc[self.front_arc !=0.0].min()
     
     def action_server_launcher(self, goal: SearchGoal):
         r = rospy.Rate(10)
@@ -103,13 +108,14 @@ class SearchActionServer(object):
         duration=rospy.get_rostime()-startTime 
         self.turn = False
         self.walk=False
-        path_rad=1.0
+        path_rad=0.6
+
         lin_vel=0.26
         
         # position_x=[]
         # position_y=[]
         while duration.secs-startTime.secs <=90:
-            if self.tb3_lidar.min_distance > goal.approach_distance:
+            if self.tb3_lidar.min_distance > 0.55:
                 self.vel_cmd.linear.x=lin_vel
                 self.vel_cmd.angular.z=lin_vel/path_rad
                 self.pub.publish(self.vel_cmd)
@@ -175,7 +181,10 @@ class SearchActionServer(object):
                 
 
                 # while turn_right==True and self.turn:
+                    if self.tb3_lidar.left_angle<=self.tb3_lidar.right_angle:
                         if abs(current_theta_z- self.theta_z) >= self.tb3_lidar.min_distance and wait > 5:
+
+
                             self.walk=True
                             self.turn=False
                             self.theta_z0 = self.theta_z
@@ -190,13 +199,66 @@ class SearchActionServer(object):
                     
                         else:
                             self.vel = Twist()
-                            self.vel.angular.z = -0.26
+                            self.vel.angular.z = -0.7
                             self.pub.publish(self.vel)
                             wait += 1
                             self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
                             # populate the feedback message and publish it:
                             self.feedback.current_distance_travelled = self.distance
                             self.actionserver.publish_feedback(self.feedback)
+
+                    else:
+                        
+                        if abs(current_theta_z- self.theta_z) >= self.tb3_lidar.min_distance and wait > 5:
+
+
+                            self.walk=True
+                            self.turn=False
+                            self.theta_z0 = self.theta_z
+                            wait = 0
+                            self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
+                        # populate the feedback message and publish it:
+                            self.feedback.current_distance_travelled = self.distance
+                            self.actionserver.publish_feedback(self.feedback)
+
+                        
+                        
+                    
+                        else:
+                            self.vel = Twist()
+                            self.vel.angular.z = -1
+                            self.pub.publish(self.vel)
+                            wait += 1
+                            self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
+                            # populate the feedback message and publish it:
+                            self.feedback.current_distance_travelled = self.distance
+                            self.actionserver.publish_feedback(self.feedback)
+                    # if self.tb3_lidar.left>=self.tb3_lidar.right:
+                    #     if abs(current_theta_z- self.theta_z) >= self.tb3_lidar.min_distance and wait > 5:
+
+
+                    #         self.walk=True
+                    #         self.turn=False
+                    #         self.theta_z0 = self.theta_z
+                    #         wait = 0
+                    #         self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
+                    #     # populate the feedback message and publish it:
+                    #         self.feedback.current_distance_travelled = self.distance
+                    #         self.actionserver.publish_feedback(self.feedback)
+
+                        
+                        
+                    
+                    #     else:
+                    #         self.vel = Twist()
+                           
+                    #         self.vel.angular.z = 0.26
+                    #         self.pub.publish(self.vel)
+                    #         wait += 1
+                    #         self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
+                    #         # populate the feedback message and publish it:
+                    #         self.feedback.current_distance_travelled = self.distance
+                    #         self.actionserver.publish_feedback(self.feedback)
 
             
 
