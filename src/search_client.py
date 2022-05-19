@@ -61,11 +61,9 @@ class action_client(object):
         self.client.send_goal(self.goal, feedback_cb=self.feedback_callback)
 
     def main(self):
-        self.send_goal(velocity = 0.25, approach = 0.6)
+        self.send_goal(velocity = 0.25, approach = 0.7)
         prempt = False
         while self.client.get_state() < 2:
-            # print(f"FEEDBACK: Currently travelled {self.distance:.3f} m, "
-            #         f"STATE: Current state code is {self.client.get_state()}")
             if self.distance >= 10:
 
                 rospy.logwarn("Cancelling goal now...")
@@ -77,13 +75,8 @@ class action_client(object):
             self.rate.sleep()
         
         self.action_complete = True
-        # print(f"RESULT: Action State = {self.client.get_state()}")
-        # if prempt:
-        #     print("RESULT: Action preempted after travelling 2 meters")
-        # else:
-        #     result = self.client.get_result()
-        #     print(f"RESULT: closest object {result.closest_object_distance:.3f} m away "
-        #             f"at a location of {result.closest_object_angle:.3f} degrees")
+        print(f"Task Completed")
+     
 
 if __name__ == '__main__':
     client_instance = action_client()

@@ -27,6 +27,7 @@ class SearchActionServer(object):
         self.actionserver.start()
         self.sub = rospy.Subscriber('odom', Odometry, self.callback_function)
         self.pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
+        self.startTime= rospy.get_rostime()
      
 
         self.x = 0.0
@@ -104,89 +105,68 @@ class SearchActionServer(object):
         print("The robot will start to move now...")
         # set the robot velocity:
         self.vel_controller.set_move_cmd(goal.fwd_velocity, 0)
-        startTime= rospy.get_rostime()
-        duration=rospy.get_rostime()-startTime 
+       
         self.turn = False
-        self.walk=False
-        path_rad=0.6
+        self.walk=True
+        path_rad=1.0
+        
 
         lin_vel=0.26
         
-        # position_x=[]
-        # position_y=[]
-        while duration.secs-startTime.secs <=90:
-            if self.tb3_lidar.min_distance > 0.55:
-                self.vel_cmd.linear.x=lin_vel
-                self.vel_cmd.angular.z=lin_vel/path_rad
-                self.pub.publish(self.vel_cmd)
+       
+        duration=rospy.get_rostime()-self.startTime 
+        while duration.secs<=90:
+            while self.walk and duration.secs<=90:
+             
+                if self.tb3_lidar.min_distance > 0.6:
+                    duration=rospy.get_rostime()-self.startTime 
+                    self.vel_cmd.linear.x=lin_vel
+                    self.vel_cmd.angular.z=lin_vel/path_rad
+                    self.pub.publish(self.vel_cmd)
+                  
+                    
+                    # duration=rospy.get_rostime()-startTime 
+                    # self.vel_controller.set_move_cmd(goal.fwd_velocity, 0)    
+                    # self.vel_controller.publish()
+                    self.angle_closet_object=self.tb3_lidar.closest_object_position
+                    self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
+            #       # populate the feedback message and publish it:
+                    self.feedback.current_distance_travelled = self.distance
+                    self.actionserver.publish_feedback(self.feedback)
+                    
 
-                # duration=rospy.get_rostime()-startTime 
-                # self.vel_controller.set_move_cmd(goal.fwd_velocity, 0)    
-                # self.vel_controller.publish()
-                self.angle_closet_object=self.tb3_lidar.closest_object_position
-                self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
-        #       # populate the feedback message and publish it:
-                self.feedback.current_distance_travelled = self.distance
-                self.actionserver.publish_feedback(self.feedback)
+                    
                 
-
-                
-               
-            else:
-                
-                self.turn=True
-                self.x0 = self.x
-                self.y0 = self.y
-                
-                self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
-        #       # populate the feedback message and publish it:
-                self.feedback.current_distance_travelled = self.distance
-                self.actionserver.publish_feedback(self.feedback)
-                
-
-                
-            # else:
-                # self.vel_controller.set_move_cmd(0, 0)
-                # self.vel_controller.publish()
+                else:
+                    duration=rospy.get_rostime()-self.startTime
+                    self.turn=True
+                    self.walk=False
+                    
+                    self.x0 = self.x
+                    self.y0 = self.y
+                    
+                    
+                    self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
+            #       # populate the feedback message and publish it:
+                    self.feedback.current_distance_travelled = self.distance
+                    self.actionserver.publish_feedback(self.feedback)
+              
+            
             wait=0
             current_theta_z=self.theta_z
             turn_right=False
             turn_left=False
             
-            # if self.angle_closet_object<0:
-            #    turn_left=True
-            # else:
-            #    turn_right=True
-            while self.turn :
-                # while turn_left==True and self.turn:
-                #     if abs(current_theta_z- self.theta_z) >= self.tb3_lidar.min_distance and wait > 5:
-                #         self.walk=True
-                #         self.turn=False
-                #         self.finish_turn=False
-                #         self.theta_z0 = self.theta_z
-                #         wait = 0
-                                    
-                                    
-                                
-                #     else:
-                #         self.vel = Twist()
-                #         self.vel.angular.z = 0.2
-                #         self.pub.publish(self.vel)
-                #         wait += 1
-                    
-                    
+            while self.turn and duration.secs<=90 :
+                       
+           
+                  
+                        if abs(current_theta_z- self.theta_z) >=  pi/2 and wait > 5:
 
-                    
-                    
-                
-
-                # while turn_right==True and self.turn:
-                    if self.tb3_lidar.left_angle<=self.tb3_lidar.right_angle:
-                        if abs(current_theta_z- self.theta_z) >= self.tb3_lidar.min_distance and wait > 5:
-
-
+                            duration=rospy.get_rostime()-self.startTime
                             self.walk=True
                             self.turn=False
+                             
                             self.theta_z0 = self.theta_z
                             wait = 0
                             self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
@@ -198,123 +178,22 @@ class SearchActionServer(object):
                         
                     
                         else:
+                            duration=rospy.get_rostime()-self.startTime
                             self.vel = Twist()
-                            self.vel.angular.z = -0.7
+                            self.vel.angular.z = 1
                             self.pub.publish(self.vel)
-                            wait += 1
-                            self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
-                            # populate the feedback message and publish it:
-                            self.feedback.current_distance_travelled = self.distance
-                            self.actionserver.publish_feedback(self.feedback)
-
-                    else:
-                        
-                        if abs(current_theta_z- self.theta_z) >= self.tb3_lidar.min_distance and wait > 5:
-
-
-                            self.walk=True
-                            self.turn=False
-                            self.theta_z0 = self.theta_z
-                            wait = 0
-                            self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
-                        # populate the feedback message and publish it:
-                            self.feedback.current_distance_travelled = self.distance
-                            self.actionserver.publish_feedback(self.feedback)
-
-                        
-                        
-                    
-                        else:
-                            self.vel = Twist()
-                            self.vel.angular.z = -1
-                            self.pub.publish(self.vel)
-                            wait += 1
-                            self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
-                            # populate the feedback message and publish it:
-                            self.feedback.current_distance_travelled = self.distance
-                            self.actionserver.publish_feedback(self.feedback)
-                    # if self.tb3_lidar.left>=self.tb3_lidar.right:
-                    #     if abs(current_theta_z- self.theta_z) >= self.tb3_lidar.min_distance and wait > 5:
-
-
-                    #         self.walk=True
-                    #         self.turn=False
-                    #         self.theta_z0 = self.theta_z
-                    #         wait = 0
-                    #         self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
-                    #     # populate the feedback message and publish it:
-                    #         self.feedback.current_distance_travelled = self.distance
-                    #         self.actionserver.publish_feedback(self.feedback)
-
-                        
-                        
-                    
-                    #     else:
-                    #         self.vel = Twist()
                            
-                    #         self.vel.angular.z = 0.26
-                    #         self.pub.publish(self.vel)
-                    #         wait += 1
-                    #         self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
-                    #         # populate the feedback message and publish it:
-                    #         self.feedback.current_distance_travelled = self.distance
-                    #         self.actionserver.publish_feedback(self.feedback)
-
-            
-
-            
-
-            
-                 
-
-
-
-                 
-           
-           
-        # self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
-        # # populate the feedback message and publish it:
-        # self.feedback.current_distance_travelled = self.distance
-        # self.actionserver.publish_feedback(self.feedback)
-        #     # elif self.walk:
-            #      self.vel_controller.set_move_cmd(0, 0)
-            #      self.vel_controller.publish()
-
-      
-
+                            wait += 1
+                            self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
+                            # populate the feedback message and publish it:
+                            self.feedback.current_distance_travelled = self.distance
+                            self.actionserver.publish_feedback(self.feedback)
         
-        # while self.tb3_lidar.min_distance > goal.approach_distance:
-        #     self.vel_controller.publish()
-        #     self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
-        #     # populate the feedback message and publish it:
-        #     self.feedback.current_distance_travelled = self.distance
-        #     self.actionserver.publish_feedback(self.feedback)
-
-
-        # while self.turn_left: 
-        #     # wait=0
-        #     # if wait <5:
-            
-        #     self.vel = Twist()
-        #     self.vel.angular.z = -0.2
-        #     status = "turning"
-        #     self.pub.publish(self.vel)
-        #     self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
-        #     # populate the feedback message and publish it:
-        #     self.feedback.current_distance_travelled = self.distance
-        #     self.actionserver.publish_feedback(self.feedback)
-        #     print(self.theta_z)
-
-
-        #     if abs(self.theta_z0 - self.theta_z) <= pi/4:
-        #         self.walk=True
-        #         self.turn=False
-        #         print(self.theta_z)
-        #         break
-
+        if duration.secs>90:
+          success=True
         
-       
-        
+
+
 
         if success:
             rospy.loginfo("approach completed sucessfully.")

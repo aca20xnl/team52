@@ -123,20 +123,16 @@ class Client(object):
 
         while self.continue_move:
         
-            if self.tb3_lidar.min_distance>0.7:
+            if self.tb3_lidar.min_distance>0.6:
                  self.send_goal(self.find_angle,102)
                 
-            # elif self.tb3_lidar.min_distance<0.7 and (( self.sense_blue and self.detect_blue) or (self.sense_red and self.detect_red) or (self.sense_green and self.detect_green) or (self.sense_turquiose and self.detect_turquiose) or  (self.sense_purple and self.detect_purple)):
-            #      self.send_goal(self.search_angle,100)
             else:
-                if self.tb3_lidar.min_distance<0.7:
+                if self.tb3_lidar.min_distance<0.6:
                     
                  self.find_angle = self.change_angle() 
                     
                 self.send_goal(self.find_angle,10)
-            # elif  self.tb3_lidar.min_distance>0.6 and (int(self.green_m['m10']/(self.green_m['m00']+1e-10)))!=0 and self.green_m['m00'] > 100000:
-            #    self.send_goal(self.search_angle,102)
-            #    print(1)
+          
             
 
             rate.sleep()
@@ -171,7 +167,7 @@ class Client(object):
         
         hsv = cv2.cvtColor(cv_img, cv2.COLOR_BGR2HSV)# turn bgr image to hsv image for detection 
         #Thresholds for ["Blue", "Red", "Green", "Turquoise","Yellow","Purple"]
-        self.lower = [(115, 224, 100), (0, 185, 100), (25, 150, 100), (75, 150, 100),(30, 200, 100),(140, 200, 100)]
+        self.lower = [(115, 224, 100), (0, 185, 100), (25, 150, 106), (75, 150, 100),(30, 200, 100),(140, 200, 100)]
         self.upper = [(130, 255, 255), (10, 255, 255), (70, 255, 255), (100, 255, 255),(45, 255, 255),(155, 200, 100)]
 
         for i in range(6):
@@ -182,7 +178,7 @@ class Client(object):
                 red_mask = cv2.inRange(hsv, numpy.array([0, 185, 100]),numpy.array([10, 255, 255]))
                 self.red_m = cv2.moments(red_mask)
             elif i==2:
-                green_mask = cv2.inRange(hsv, numpy.array([25, 110, 105]),numpy.array([70, 255, 255]))
+                green_mask = cv2.inRange(hsv, numpy.array([25, 150, 106]),numpy.array([70, 255, 255]))
                 self.green_m = cv2.moments(green_mask)
             elif i==3:
                 turquoise_mask = cv2.inRange(hsv,numpy.array([75, 150, 100]),numpy.array([100, 255, 255]))
@@ -195,40 +191,40 @@ class Client(object):
                 self.purple_m = cv2.moments(purple_mask)
 
 
-        self.blue_cy = int(self.blue_m['m10']/(self.blue_m['m00']+1e-10))
-        self.red_cy =int(self.red_m['m10']/(self.red_m['m00']+1e-10))
-        self.green_cy = int(self.green_m['m10']/(self.green_m['m00']+1e-10))
-        self.turquoise_cy = int(self.turquoise_m['m10']/(self.turquoise_m['m00']+1e-10))
-        self.yellow_cy = int(self.yellow_m['m10']/(self.yellow_m['m00']+1e-10))
-        self.purple_cy = int(self.purple_m['m10']/(self.purple_m['m00']+1e-10))
+        self.blue_cy = int(self.blue_m['m10']/(self.blue_m['m00']+1e-5))
+        self.red_cy =int(self.red_m['m10']/(self.red_m['m00']+1e-5))
+        self.green_cy = int(self.green_m['m10']/(self.green_m['m00']+1e-5))
+        self.turquoise_cy = int(self.turquoise_m['m10']/(self.turquoise_m['m00']+1e-5))
+        self.yellow_cy = int(self.yellow_m['m10']/(self.yellow_m['m00']+1e-5))
+        self.purple_cy = int(self.purple_m['m10']/(self.purple_m['m00']+1e-5))
         
 
-        if (int(self.blue_m['m10']/(self.blue_m['m00']+1e-10)))!=0 and self.blue_m['m00'] > 100000:
+        if (int(self.blue_m['m10']/(self.blue_m['m00']+1e-5)))!=0 and self.blue_m['m00'] > 100000:
             self.detect_blue = True
         else:
             self.detect_blue = False
 
-        if (int(self.red_m['m10']/(self.red_m['m00']+1e-10)))!=0 and self.red_m['m00'] > 100000:
+        if (int(self.red_m['m10']/(self.red_m['m00']+1e-5)))!=0 and self.red_m['m00'] > 100000:
             self.detect_red = True
         else:
             self.detect_red = False
 
-        if (int(self.green_m['m10']/(self.green_m['m00']+1e-10)))!=0 and self.green_m['m00'] > 100000:
+        if (int(self.green_m['m10']/(self.green_m['m00']+1e-5)))!=0 and self.green_m['m00'] > 100000:
             self.detect_green = True
         else:
              self.detect_green = False
         
-        if(int(self.turquoise_m['m10']/(self.turquoise_m['m00']+1e-10)))!=0 and self.turquoise_m['m00'] > 100000:
+        if(int(self.turquoise_m['m10']/(self.turquoise_m['m00']+1e-5)))!=0 and self.turquoise_m['m00'] > 100000:
             self.detect_turquiose = True
         else:
             self.detect_turquiose = False
 
-        if(int(self.yellow_m['m10']/(self.yellow_m['m00']+1e-10)))!=0 and self.yellow_m['m00'] > 100000:
+        if(int(self.yellow_m['m10']/(self.yellow_m['m00']+1e-5)))!=0 and self.yellow_m['m00'] > 100000:
             self.detect_yellow = True
         else:
             self.detect_yellow = False
 
-        if (int(self.purple_m['m10']/(self.purple_m['m00']+1e-10)))!=0 and self.purple_m['m00'] > 100000:
+        if (int(self.purple_m['m10']/(self.purple_m['m00']+1e-5)))!=0 and self.purple_m['m00'] > 100000:
             self.detect_purple = True
         else:
             self.detect_purple = False
