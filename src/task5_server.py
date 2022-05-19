@@ -62,17 +62,29 @@ class Task3(object):
 
     
     def scan_callback(self, scan_data):
-        front_left_arc = scan_data.ranges[0:31]
-        front_right_arc = scan_data.ranges[-30:]
-        front_arc = np.array(front_left_arc[::-1] + front_right_arc[::-1])
+
+        arc_front_left = scan_data.ranges[0:31]
+        arc_front_right = scan_data.ranges[-30:]
+        
+        front_arc = np.array(arc_front_left[::-1] + arc_front_right[::-1])
+        front_right_arc = np.array(scan_data.ranges[300:330])
+        front_left_arc = np.array(scan_data.ranges[30:60])
+        right_arc = np.array(scan_data.ranges[270:300])
+        left_arc = np.array(scan_data.ranges[60:120])
+
+        front_arc = front_arc[front_arc != 0.0]
+        front_right_arc = front_right_arc[front_right_arc != 0.0]
+        front_left_arc = front_left_arc[front_left_arc != 0.0]
+        right_arc = right_arc[right_arc != 0.0]
+        left_arc = left_arc[left_arc != 0.0]
 
         global arcs
         arcs = {
             'front_arc':  min(front_arc),
-            'front_right_arc': min(np.array(scan_data.ranges[300:330])),
-            'front_left_arc':  min(np.array(scan_data.ranges[30:60])),
-            'right_arc':  min(np.array(scan_data.ranges[270:300])),
-            'left_arc':   min(np.array(scan_data.ranges[60:120])),
+            'front_right_arc': min(front_right_arc),
+            'front_left_arc':  min(front_left_arc ),
+            'right_arc':  min(right_arc),
+            'left_arc':   min(left_arc),
         }
 
         self.navigate()
@@ -131,7 +143,7 @@ class Task3(object):
         # elif not front_has_spaces and not front_left_has_spaces and not left_has_spaces:
         #     current_move = 'turn right'
         #     print("turned left as there's no space on front and left side")
-        return
+        # return
 
     def action_server_launcher(self, goal):
         r = rospy.Rate(10)
