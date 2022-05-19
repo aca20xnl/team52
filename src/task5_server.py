@@ -3,6 +3,8 @@
 # Import the core Python modules for ROS and to implement ROS Actions:
 from operator import le
 import rospy
+import roslaunch
+        # import rospy
 import actionlib
 
 # Import all the necessary ROS message types:
@@ -20,11 +22,14 @@ class Task3(object):
     feedback = SearchFeedback() 
     result = SearchResult()
 
-    def __init__(self):
 
+    def __init__(self):
+        rospy.on_shutdown(self.shutdownhook) 
         self.node_name = "/task3_action_server"
         self.actionserver = actionlib.SimpleActionServer(self.node_name, SearchAction, self.action_server_launcher, auto_start=False)
         self.actionserver.start()
+
+        self.ctrl_c = False
 
         self.tb3_odom = Tb3Odometry()
         self.vel_pub = rospy.Publisher("cmd_vel", Twist, queue_size=10) 
@@ -145,35 +150,48 @@ class Task3(object):
         #     print("turned left as there's no space on front and left side")
         # return
 
+    def shutdownhook(self):
+        # print(f"Stopping the '{self.node_name}' node at: {rospy.get_time()}")
+        self.ctrl_c = True
+        
+    
     def action_server_launcher(self, goal):
         r = rospy.Rate(10)
         success = True
 
-        while success:
+        while success and not self.ctrl_c:
             if current_move == 'move towards wall':
                 self.vel.linear.x = 0.26
                 self.vel.angular.z = 0.6
                 self.vel_pub.publish(self.vel)
+              
             elif current_move == 'turn right':
                 self.vel.linear.x = 0.0
                 self.vel.angular.z = -0.6
                 self.vel_pub.publish(self.vel)
+                
             elif current_move == 'go straight':
                 self.vel.linear.x = 0.26
                 self.vel.angular.z = 0.0
                 self.vel_pub.publish(self.vel)
+               
             elif current_move == 'turn left':
                 self.vel.linear.x = 0.0
                 self.vel.angular.z = 0.6
                 self.vel_pub.publish(self.vel)
+               
             else:
                 rospy.logerr('Oh No! Undefined move.')
+            
 
         r.sleep()
-
+        self.vel.linear.x = 0.0
+        self.vel.angular.z = 0.0
+        self.vel_pub.publish(self.vel)
+        
         if success:
             rospy.loginfo('Robot sucessfully navigated the maze.')
-            self.result.image_path = self.base_image_path
+            # self.result.image_path = self.base_image_path
             self.actionserver.set_succeeded(self.result)
             self.vel.linear.x = 0.0
             self.vel.angular.z = 0.0
@@ -184,5 +202,18 @@ if __name__ == '__main__':
     rospy.init_node('task3_action_server')
     Task3()
     rospy.spin()
+    
+    # map_path = " $(find team52)/maps/task5_map"
+
+    # rospy.init_node("map_getter", anonymous=True)
+
+    # launch = roslaunch.scriptapi.ROSLaunch()
+    # launch.start()
+
+    # print(f"Saving map at time: {rospy.get_time()}...")
+    # node = roslaunch.core.Node(package="map_server",
+    #                                 node_type="map_saver",
+    #                                 args=f"-f {map_path}")
+    # process = launch.launch(node)
 
 
