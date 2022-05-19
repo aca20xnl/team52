@@ -9,6 +9,7 @@ import actionlib
 from com2009_msgs.msg import SearchFeedback, SearchResult, SearchAction
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
+# from nav_msgs.msg import OccupancyGrid, Path
 
 
 from tb3 import Tb3Odometry
@@ -28,6 +29,8 @@ class Task3(object):
         self.tb3_odom = Tb3Odometry()
         self.vel_pub = rospy.Publisher("cmd_vel", Twist, queue_size=10) 
         self.lidar = rospy.Subscriber("/scan", LaserScan, self.scan_callback)
+        # self.map = OccupancyGrid()
+        # self.sub_map = rospy.Subscriber("/map", OccupancyGrid, self.map_callback)
 
         self.vel = Twist()
 
@@ -49,6 +52,15 @@ class Task3(object):
             'turn left' : 'turn left',
         }
 
+    # def map_callback(self,data):
+    #     valid=False
+    #     self.map = data
+    #     map_size=0
+    #     while valid is False:
+    #         map_size = randrange(len(data.data))
+    #         map_cell_value=data.data[map_size]
+
+    
     def scan_callback(self, scan_data):
         front_left_arc = scan_data.ranges[0:31]
         front_right_arc = scan_data.ranges[-30:]
