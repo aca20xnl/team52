@@ -48,19 +48,28 @@ class Tb3Odometry(object):
 
 class Tb3LaserScan(object):
     def laserscan_cb(self, scan_data):
-        left_arc = scan_data.ranges[0:31]
-        right_arc = scan_data.ranges[-30:]
-        front_arc = np.array(left_arc[::-1] + right_arc[::-1])
         
-        self.min_distance = front_arc.min()
-        self.left_angle=(np.array(left_arc[::-1])).min()
-        self.right_angle=(np.array(right_arc[::-1])).min()
-        arc_angles = np.arange(-30, 31)
-        self.closest_object_position = arc_angles[np.argmin(front_arc)]
+        left_arc =scan_data.ranges[80:100]
+        self.left = (np.array(left_arc[::-1])).min()
+
+        right_arc =scan_data.ranges[260:280]
+        self.right = (np.array(right_arc[::-1])).min()
+
+        front_left_arc= scan_data.ranges[0:20]
+        front_left= (np.array(front_left_arc[::-1])).min()
+        front_right_arc= scan_data.ranges[-20:]
+        front_right= (np.array(front_right_arc[::-1])).min()
+        self.front= min(front_left,front_right)
+
+        min_distance_left_arc= scan_data.ranges[0:30]
+        min_distance_left= (np.array(min_distance_left_arc[::-1])).min()
+        min_distance_right_arc= scan_data.ranges[-30:]
+        min_distance_right= (np.array(min_distance_right_arc[::-1])).min()
+
+        self.min_distance=min(min_distance_left, min_distance_right)
+
 
     def __init__(self):
         self.min_distance = 0.0
         self.closest_object_position = 0.0 # degrees
-        self.left_angle=0
-        self.right_angle=0
         self.subscriber = rospy.Subscriber('/scan', LaserScan, self.laserscan_cb) 
