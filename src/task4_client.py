@@ -165,9 +165,9 @@ class Client(object):
     
         cv_img = CvBridge().imgmsg_to_cv2(msg, desired_encoding="bgr8")
         
-        hsv = cv2.cvtColor(cv_img, cv2.COLOR_BGR2HSV)# turn bgr image to hsv image for detection 
+        hsv = cv2.cvtColor(cv_img, cv2.COLOR_BGR2HSV)
         #Thresholds for ["Blue", "Red", "Green", "Turquoise","Yellow","Purple"]
-        self.lower = [(115, 224, 100), (0, 185, 100), (25, 150, 106), (75, 150, 100),(30, 200, 100),(140, 200, 100)]
+        self.lower = [(115, 224, 100), (0, 185, 100), (25, 150, 106), (85, 150, 100),(30, 200, 100),(140, 200, 100)]
         self.upper = [(130, 255, 255), (10, 255, 255), (70, 255, 255), (100, 255, 255),(45, 255, 255),(155, 200, 100)]
 
         for i in range(6):
@@ -181,13 +181,13 @@ class Client(object):
                 green_mask = cv2.inRange(hsv, numpy.array([25, 150, 106]),numpy.array([70, 255, 255]))
                 self.green_m = cv2.moments(green_mask)
             elif i==3:
-                turquoise_mask = cv2.inRange(hsv,numpy.array([75, 150, 100]),numpy.array([100, 255, 255]))
+                turquoise_mask = cv2.inRange(hsv,numpy.array([85, 150, 100]),numpy.array([100, 255, 255]))
                 self.turquoise_m = cv2.moments(turquoise_mask)
             elif i==4:
                 yellow_mask = cv2.inRange(hsv, numpy.array([30, 200, 100]),numpy.array([45, 255, 255]))
                 self.yellow_m = cv2.moments(yellow_mask)
             elif i==5:
-                purple_mask = cv2.inRange(hsv, numpy.array([140, 200, 100]),numpy.array([155, 200, 100]))
+                purple_mask = cv2.inRange(hsv, numpy.array([140, 200, 100]),numpy.array([155, 255, 100]))
                 self.purple_m = cv2.moments(purple_mask)
 
 
