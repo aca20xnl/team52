@@ -170,7 +170,7 @@ class Client(object):
         hsv = cv2.cvtColor(cv_img, cv2.COLOR_BGR2HSV)
         #Thresholds for ["Blue", "Red", "Green", "Turquoise","Yellow","Purple"]
         self.lower = [(115, 224, 100), (0, 185, 100), (35, 150, 106), (85, 150, 100),(30, 200, 100),(140, 200, 100)]
-        self.upper = [(130, 255, 255), (10, 255, 255), (70, 255, 255), (100, 255, 255),(45, 255, 255),(155, 200, 255)]
+        self.upper = [(130, 255, 255), (10, 255, 255), (70, 255, 255), (100, 255, 255),(45, 255, 255),(155, 255, 255)]
 
         for i in range(6):
             if i == 0:
