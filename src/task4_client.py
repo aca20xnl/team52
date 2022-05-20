@@ -12,15 +12,7 @@ from task4_tb3 import Tb3LaserScan
 
 class Client(object):
    
-    def feedback_callback(self, feedback_data):
-        if self.init:
-            #initial angle
-            self.initial_angle = feedback_data.current_angle
-            self.init = False
-            self.find_angle = self.initial_angle 
-
-        #current angle
-        self.current_arc = feedback_data.current_angle
+   
 
     def __init__(self):
 
@@ -137,6 +129,16 @@ class Client(object):
 
             rate.sleep()
 
+    def feedback_callback(self, feedback_data):
+        if self.init:
+            #initial angle
+            self.initial_angle = feedback_data.current_angle
+            self.init = False
+            self.find_angle = self.initial_angle 
+
+        #current angle
+        self.current_arc = feedback_data.current_angle
+
 
 
     def change_angle(self):
@@ -167,8 +169,8 @@ class Client(object):
         
         hsv = cv2.cvtColor(cv_img, cv2.COLOR_BGR2HSV)
         #Thresholds for ["Blue", "Red", "Green", "Turquoise","Yellow","Purple"]
-        self.lower = [(115, 224, 100), (0, 185, 100), (25, 150, 106), (85, 150, 100),(30, 200, 100),(140, 200, 100)]
-        self.upper = [(130, 255, 255), (10, 255, 255), (70, 255, 255), (100, 255, 255),(45, 255, 255),(155, 200, 100)]
+        self.lower = [(115, 224, 100), (0, 185, 100), (35, 150, 106), (85, 150, 100),(30, 200, 100),(140, 200, 100)]
+        self.upper = [(130, 255, 255), (10, 255, 255), (70, 255, 255), (100, 255, 255),(45, 255, 255),(155, 200, 255)]
 
         for i in range(6):
             if i == 0:
@@ -178,7 +180,7 @@ class Client(object):
                 red_mask = cv2.inRange(hsv, numpy.array([0, 185, 100]),numpy.array([10, 255, 255]))
                 self.red_m = cv2.moments(red_mask)
             elif i==2:
-                green_mask = cv2.inRange(hsv, numpy.array([25, 150, 106]),numpy.array([70, 255, 255]))
+                green_mask = cv2.inRange(hsv, numpy.array([35, 150, 106]),numpy.array([70, 255, 255]))
                 self.green_m = cv2.moments(green_mask)
             elif i==3:
                 turquoise_mask = cv2.inRange(hsv,numpy.array([85, 150, 100]),numpy.array([100, 255, 255]))
@@ -187,7 +189,7 @@ class Client(object):
                 yellow_mask = cv2.inRange(hsv, numpy.array([30, 200, 100]),numpy.array([45, 255, 255]))
                 self.yellow_m = cv2.moments(yellow_mask)
             elif i==5:
-                purple_mask = cv2.inRange(hsv, numpy.array([140, 200, 100]),numpy.array([155, 255, 100]))
+                purple_mask = cv2.inRange(hsv, numpy.array([140, 200, 100]),numpy.array([155, 255, 255]))
                 self.purple_m = cv2.moments(purple_mask)
 
 
