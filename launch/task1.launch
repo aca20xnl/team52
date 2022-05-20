@@ -1,5 +1,5 @@
 <launch>
   <!-- <node pkg="team52" type="path8.py" name="path8_node"  output="screen"></node> -->
   <!-- <node pkg="team52" type="search_server.py" name="search_server_node"  output="screen"></node> -->
-    <node name="action_server" pkg="team52" type="search_client.py" output="screen"></node>
+    <node name="action_server" pkg="team52" type="path8.py" output="screen"></node>
 </launch>
